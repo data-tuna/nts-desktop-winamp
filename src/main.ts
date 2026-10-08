@@ -29,6 +29,7 @@ if (!Webamp.browserIsSupported()) {
   container.textContent = "This WebView cannot run Webamp.";
 } else {
   const saved = loadSettings();
+  const reconnect = reconnectOnDrop();
   // No initialSkin: Webamp falls back to the base skin bundled with the npm package.
   const webamp = new Webamp({
     initialTracks: STREAMS.map((stream) => ({
@@ -45,10 +46,10 @@ if (!Webamp.browserIsSupported()) {
       playlist: { position: { top: 232, left: 0 }, closed: !saved.playlist },
       milkdrop: { position: { top: 348, left: 0 }, closed: true },
     },
-    __customMiddlewares: [wrapAtPlaylistEnds],
+    __customMiddlewares: [wrapAtPlaylistEnds, reconnect.middleware],
   });
   if (typeof saved.volume === "number") webamp.setVolume(saved.volume);
-  reconnectOnDrop(webamp);
+  reconnect.watch(webamp);
   bindChannelKeys(webamp);
   webamp
     .renderWhenReady(container)
@@ -127,47 +128,99 @@ function bindChannelKeys(webamp: Webamp): void {
  * one, which silently switched NTS 1 to NTS 2 when the network dropped.
  * Replace that: a dropped or stuck stream reloads the same channel, with
  * backoff, for as long as the player is meant to be playing. Pause and stop
- * stay manual.
+ * stay manual, but Play after a drop reloads the stream instead of resuming
+ * the dead one. Any user action cancels a pending retry and resets the backoff.
  */
-function reconnectOnDrop(webamp: Webamp): void {
+function reconnectOnDrop(): { middleware: Middleware; watch: (webamp: Webamp) => void } {
   let retryMs = RETRY_MIN_MS;
   let timer: number | undefined;
-  let lastElapsed = -1;
-  let stalledSince = performance.now();
+  // The stream has failed and has not played since.
+  let dropped = false;
+  // Set while our own retry dispatches, so it is not mistaken for the user.
+  let retrying = false;
+  let store: MiddlewareStore | undefined;
 
-  const isPlaying = (): boolean => webamp.store.getState().media.status === "PLAYING";
+  const isPlaying = (): boolean => store?.getState().media.status === "PLAYING";
+  const cancel = (): void => {
+    window.clearTimeout(timer);
+    timer = undefined;
+    retryMs = RETRY_MIN_MS;
+  };
   const reconnect = (): void => {
-    if (timer !== undefined || !isPlaying()) return;
-    const id = webamp.store.getState().playlist.currentTrack;
+    dropped = true;
+    if (!store || timer !== undefined || !isPlaying()) return;
+    const id = store.getState().playlist.currentTrack;
     if (id == null) return;
     console.warn(`Stream dropped, reconnecting in ${retryMs} ms`);
     timer = window.setTimeout(() => {
       timer = undefined;
-      stalledSince = performance.now();
-      // The user may have paused or switched channel meanwhile; leave that alone.
-      if (!isPlaying() || webamp.store.getState().playlist.currentTrack !== id) return;
-      webamp.store.dispatch({ type: "PLAY_TRACK", id });
+      if (!store || !isPlaying()) return;
+      retrying = true;
+      try {
+        store.dispatch({ type: "PLAY_TRACK", id });
+      } finally {
+        retrying = false;
+      }
     }, retryMs);
     retryMs = Math.min(retryMs * 2, RETRY_MAX_MS);
   };
 
-  // Webamp's own "ended" listener dispatches next(). Live streams never end
-  // on purpose, so every "ended" (Webamp also fires it on errors) is a drop.
-  // `_emitter` is not public API; check it when upgrading Webamp.
-  (webamp.media as unknown as { _emitter: { _listeners: Record<string, unknown[]> } })._emitter._listeners.ended = [reconnect];
+  const middleware: Middleware = (middlewareStore) => {
+    store = middlewareStore;
+    return (next) => (action) => {
+      if (retrying) return next(action);
+      switch (action.type) {
+        case "PLAY_TRACK":
+        case "BUFFER_TRACK":
+          // A fresh load: its own failure starts a fresh backoff.
+          cancel();
+          dropped = false;
+          break;
+        case "PAUSE":
+        case "STOP":
+          cancel();
+          break;
+        case "PLAY": {
+          cancel();
+          const result = next(action);
+          const id = middlewareStore.getState().playlist.currentTrack;
+          if (dropped && id != null) middlewareStore.dispatch({ type: "PLAY_TRACK", id });
+          return result;
+        }
+      }
+      return next(action);
+    };
+  };
 
-  // A stream that stops delivering often raises no error at all: the element
-  // just waits. Watch the clock instead.
-  window.setInterval(() => {
-    const elapsed = webamp.media.timeElapsed();
-    if (!isPlaying() || elapsed !== lastElapsed) {
-      if (isPlaying() && elapsed > lastElapsed && timer === undefined) retryMs = RETRY_MIN_MS;
-      lastElapsed = elapsed;
-      stalledSince = performance.now();
-      return;
-    }
-    if (performance.now() - stalledSince >= STALL_MS) reconnect();
-  }, 1000);
+  const watch = (webamp: Webamp): void => {
+    // Webamp's own "ended" listener dispatches next(). Live streams never end
+    // on purpose, so every "ended" (Webamp also fires it on errors) is a drop.
+    // `_emitter` is not public API; check it when upgrading Webamp.
+    (webamp.media as unknown as { _emitter: { _listeners: Record<string, unknown[]> } })._emitter._listeners.ended = [reconnect];
+
+    // A stream that stops delivering often raises no error at all: the element
+    // just waits. Watch the clock instead.
+    let lastElapsed = -1;
+    let stalledSince = performance.now();
+    window.setInterval(() => {
+      const elapsed = webamp.media.timeElapsed();
+      if (!isPlaying() || elapsed !== lastElapsed) {
+        if (isPlaying() && elapsed > lastElapsed && timer === undefined) {
+          retryMs = RETRY_MIN_MS;
+          dropped = false;
+        }
+        lastElapsed = elapsed;
+        stalledSince = performance.now();
+        return;
+      }
+      if (performance.now() - stalledSince >= STALL_MS) {
+        stalledSince = performance.now();
+        reconnect();
+      }
+    }, 1000);
+  };
+
+  return { middleware, watch };
 }
 
 /**

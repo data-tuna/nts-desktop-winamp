@@ -15,8 +15,9 @@ and starts NTS 1 on its own. Switch channels with next or previous, by
 double-clicking NTS 1 or NTS 2 in the playlist, or with the 1 and 2 keys. If
 the stream drops, it reconnects to the same channel by itself. Volume and
 whether the equaliser and playlist are open carry over to the next launch;
-the channel does not, it always starts on NTS 1. Milkdrop starts closed and opens from Webamp. The
-skins and the show titles are still to come. Windows comes first, then macOS.
+the channel does not: it always starts on NTS 1. Milkdrop starts closed and
+opens from Webamp. The skins and the show titles are still to come. Windows
+comes first, then macOS.
 
 ## Credits
 

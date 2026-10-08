@@ -105,7 +105,8 @@ on NTS 1 used to start NTS 2. `main.ts` replaces that listener: a drop, or a
 clock that has not moved for 10 s while playing, reloads the same channel with
 backoff (1, 2, 4, then every 8 s). A failed load usually errors at once, so
 those are the gaps; one that just hangs waits out the 10 s first. Pause, stop
-and a channel switch cancel a pending retry. Next on
+and a channel switch cancel a pending retry and reset the backoff, and Play
+after a drop reloads the stream rather than resuming the dead one. Next on
 NTS 2 and previous on NTS 1 wrap to the other channel instead of stopping.
 
 **ICY titles are empty on these streams.** Webamp does not read ICY metadata
