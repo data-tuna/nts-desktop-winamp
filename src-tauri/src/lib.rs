@@ -16,6 +16,12 @@ pub fn run() {
             read_skin,
             write_skin
         ])
+        // Closing the player quits, even with the skin browser still open.
+        .on_window_event(|window, event| {
+            if window.label() == "main" && matches!(event, tauri::WindowEvent::Destroyed) {
+                window.app_handle().exit(0);
+            }
+        })
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }

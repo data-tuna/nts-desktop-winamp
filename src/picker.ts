@@ -39,7 +39,7 @@ const favourites = () => readJson<Skin[]>(KEYS.favourites, []);
 
 function render(): void {
   const skin = currentSkin();
-  current.textContent = skin ? skinName(skin) : "Base skin";
+  current.textContent = skin ? skinName(skin) : "A skin not from the Museum";
   const isFavourite = !!skin && favourites().some((f) => f.md5 === skin.md5);
   favourite.textContent = isFavourite ? "★ Favourite" : "☆ Favourite";
   favourite.setAttribute("aria-pressed", String(isFavourite));

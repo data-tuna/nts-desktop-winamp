@@ -107,6 +107,8 @@ async function skinBytes(skin: Skin): Promise<ArrayBuffer> {
     if (!response.ok) throw new Error(`Skin download: HTTP ${response.status}`);
     const bytes = await response.arrayBuffer();
     await invoke("write_skin", bytes, { headers: { md5: skin.md5 } });
+    // Now, not on apply: a download that loses its race is still cached.
+    remember(skin);
     return bytes;
   }
 }
@@ -123,7 +125,8 @@ function blobUrl(bytes: ArrayBuffer): string {
 /**
  * The skin to start with, from local disk only so startup never waits on
  * the network: the kept skin, else a random cached one other than the last.
- * Undefined means Webamp's base skin.
+ * Undefined means Webamp's base skin, which is also what keeping a skin
+ * that is not from the Museum gives.
  */
 export async function launchSkin(): Promise<{ url: string } | undefined> {
   const current = currentSkin();
@@ -131,10 +134,9 @@ export async function launchSkin(): Promise<{ url: string } | undefined> {
   try {
     const cached = await invoke<string[]>("cached_skins");
     const others = cached.filter((md5) => md5 !== current?.md5);
-    const md5 =
-      keep && current
-        ? current.md5
-        : (others[Math.floor(Math.random() * others.length)] ?? current?.md5);
+    const md5 = keep
+      ? current?.md5
+      : (others[Math.floor(Math.random() * others.length)] ?? current?.md5);
     if (md5 && cached.includes(md5)) {
       const bytes = await invoke<ArrayBuffer>("read_skin", { md5 });
       // Forget skins the cache has evicted, so this map stays small.
@@ -159,6 +161,8 @@ export async function launchSkin(): Promise<{ url: string } | undefined> {
 // Every skin change takes a ticket. A slow change that a newer one has
 // overtaken (say, the launch swap after the user picked a skin) never lands.
 let latestChange = 0;
+// True while applySkin's own load is in Webamp's hands.
+let applying = false;
 
 /**
  * Puts `next` on Webamp, caching it, and tells the picker. `next` may still
@@ -174,8 +178,10 @@ export async function applySkin(
   const bytes = await skinBytes(skin);
   if (ticket !== latestChange || !stillWanted()) return;
   const url = blobUrl(bytes);
+  applying = true;
   webamp.setSkinFromUrl(url);
   await webamp.skinIsLoaded();
+  applying = false;
   URL.revokeObjectURL(url);
   if (ticket !== latestChange) return;
   remember(skin);
@@ -186,9 +192,12 @@ export async function applySkin(
 /** After launch: swap in a fresh random skin, unless the user kept one. */
 export async function swapInRandomSkin(webamp: Webamp): Promise<void> {
   const current = currentSkin();
-  if (isKept() && current) {
+  if (isKept()) {
     // Kept but not in the cache (evicted, or first kept offline): fetch it.
-    if (!(await invoke<string[]>("cached_skins")).includes(current.md5) && current.download_url) {
+    if (
+      current?.download_url &&
+      !(await invoke<string[]>("cached_skins")).includes(current.md5)
+    ) {
       await applySkin(webamp, current);
     }
     return;
@@ -246,6 +255,20 @@ export function connectPicker(webamp: Webamp): void {
     console.error("Could not change the skin", error);
     void emitTo("picker", "skin-error", String(error));
   };
+  // Webamp's own <Base Skin>, Load Skin... and a dropped .wsz load skins too.
+  // Such a skin is not a Museum skin: forget the current one, and overtake
+  // any change in flight so it cannot land on top of the user's choice.
+  let images = webamp.store.getState().display.skinImages;
+  webamp.__onStateChange(() => {
+    const next = webamp.store.getState().display.skinImages;
+    if (next === images) return;
+    images = next;
+    if (applying) return;
+    latestChange++;
+    localStorage.removeItem(KEYS.current);
+    void emitTo("picker", "skin-changed", null);
+  });
+
   void listen<Skin>("pick-skin", ({ payload }) => void applySkin(webamp, payload).catch(report));
   void listen("random-skin", () => {
     void applySkin(webamp, randomSkin(currentSkin()?.md5)).catch(report);

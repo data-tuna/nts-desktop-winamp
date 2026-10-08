@@ -81,9 +81,13 @@ from `webamp/butterchurn`. It renders classic `.wsz` skins only.
 
 - **Startup never waits on the network.** The launch skin comes from the
   local cache: the kept skin, or a random cached one other than the last.
-  An empty cache means Webamp's base skin. Once audio is playing, one
-  random APPROVED, non-NSFW skin is fetched from the Museum and swapped in.
-  Offline, the cached skin stays.
+  An empty cache means Webamp's base skin. Right after playback starts, one
+  random APPROVED, non-NSFW skin is fetched from the Museum and swapped in;
+  launches measured no later audio start for it. Offline, the cached skin
+  stays.
+- **Skins loaded through Webamp itself** (its base skin, Load Skin..., a
+  dropped `.wsz`) are not Museum skins: the app forgets its current skin, and
+  keeping one gives the base skin on the next launch.
 - **The cache is plain files** in `%LOCALAPPDATA%\com.datatuna.ntswinamp\skins`,
   named by md5, written and read through three Rust commands that only the
   main window may call. Over 200 MB, the oldest downloads go first, kept and
