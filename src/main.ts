@@ -51,6 +51,7 @@ function start(initialSkin: { url: string } | undefined): void {
       // Autoplay with no click relies on WebView2's
       // --autoplay-policy=no-user-gesture-required (tauri.conf.json).
       webamp.play();
+      if (initialSkin) URL.revokeObjectURL(initialSkin.url);
       connectPicker(webamp);
       // Offline, the launch skin from the cache simply stays.
       swapInRandomSkin(webamp).catch((error: unknown) =>

@@ -11,6 +11,9 @@
     "core:window:allow-close",
     "core:window:allow-set-focus",
     "core:window:allow-unminimize",
-    "core:webview:allow-create-webview-window"
+    "core:webview:allow-create-webview-window",
+    "allow-cached-skins",
+    "allow-read-skin",
+    "allow-write-skin"
   ]
 }

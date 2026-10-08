@@ -10,6 +10,7 @@ const SKIN_CACHE_CAP_BYTES: u64 = 200 * 1024 * 1024;
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
+        .plugin(tauri_plugin_opener::init())
         .invoke_handler(tauri::generate_handler![
             cached_skins,
             read_skin,
@@ -71,8 +72,15 @@ fn write_skin(app: AppHandle, request: Request<'_>) -> Result<(), String> {
         .ok_or("missing md5 header")?;
     let dir = skins_dir(&app)?;
     let path = skin_path(&dir, md5)?;
-    fs::write(&path, bytes).map_err(|e| e.to_string())?;
-    prune(&dir, SKIN_CACHE_CAP_BYTES, &path).map_err(|e| e.to_string())
+    // Write then rename, so a crash never leaves a truncated skin behind.
+    let partial = path.with_extension("part");
+    fs::write(&partial, bytes).map_err(|e| e.to_string())?;
+    fs::rename(&partial, &path).map_err(|e| e.to_string())?;
+    // The skin is saved either way; a failed prune only delays the cap.
+    if let Err(error) = prune(&dir, SKIN_CACHE_CAP_BYTES, &path) {
+        eprintln!("could not prune the skin cache: {error}");
+    }
+    Ok(())
 }
 
 /// Deletes the oldest `.wsz` files in `dir` until the rest fit in `cap`

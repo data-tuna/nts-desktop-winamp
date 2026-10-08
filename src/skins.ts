@@ -35,6 +35,9 @@ export function writeJson(key: string, value: unknown): void {
   localStorage.setItem(key, JSON.stringify(value));
 }
 
+export const currentSkin = () => readJson<Skin | null>(KEYS.current, null);
+export const isKept = () => readJson<boolean>(KEYS.keep, false);
+
 async function museum<T>(query: string, variables: Record<string, unknown>): Promise<T> {
   const response = await fetch("https://api.webamp.org/graphql", {
     method: "POST",
@@ -96,6 +99,10 @@ async function skinBytes(skin: Skin): Promise<ArrayBuffer> {
   try {
     return await invoke<ArrayBuffer>("read_skin", { md5: skin.md5 });
   } catch {
+    // Skins come from the Museum's bucket and nowhere else.
+    if (!skin.download_url.startsWith("https://r2.webampskins.org/")) {
+      throw new Error(`Not a Skin Museum download: ${skin.download_url}`);
+    }
     const response = await fetch(skin.download_url);
     if (!response.ok) throw new Error(`Skin download: HTTP ${response.status}`);
     const bytes = await response.arrayBuffer();
@@ -119,8 +126,8 @@ function blobUrl(bytes: ArrayBuffer): string {
  * Undefined means Webamp's base skin.
  */
 export async function launchSkin(): Promise<{ url: string } | undefined> {
-  const current = readJson<Skin | null>(KEYS.current, null);
-  const keep = readJson<boolean>(KEYS.keep, false);
+  const current = currentSkin();
+  const keep = isKept();
   try {
     const cached = await invoke<string[]>("cached_skins");
     const others = cached.filter((md5) => md5 !== current?.md5);
@@ -137,7 +144,7 @@ export async function launchSkin(): Promise<{ url: string } | undefined> {
         ),
       );
       writeJson(KEYS.known, known);
-      const unknown = { md5, filename: md5, nsfw: false, download_url: "", screenshot_url: "" };
+      const unknown = { md5, filename: md5, nsfw: null, download_url: "", screenshot_url: "" };
       writeJson(KEYS.current, md5 === current?.md5 ? current : (known[md5] ?? unknown));
       return { url: blobUrl(bytes) };
     }
@@ -149,28 +156,45 @@ export async function launchSkin(): Promise<{ url: string } | undefined> {
   return undefined;
 }
 
-/** Puts `skin` on Webamp, caching it, and tells the picker. */
-export async function applySkin(webamp: Webamp, skin: Skin): Promise<void> {
-  const url = blobUrl(await skinBytes(skin));
+// Every skin change takes a ticket. A slow change that a newer one has
+// overtaken (say, the launch swap after the user picked a skin) never lands.
+let latestChange = 0;
+
+/**
+ * Puts `next` on Webamp, caching it, and tells the picker. `next` may still
+ * be on its way; the ticket is taken now. `stillWanted` can veto it late.
+ */
+export async function applySkin(
+  webamp: Webamp,
+  next: Skin | Promise<Skin>,
+  stillWanted: () => boolean = () => true,
+): Promise<void> {
+  const ticket = ++latestChange;
+  const skin = await next;
+  const bytes = await skinBytes(skin);
+  if (ticket !== latestChange || !stillWanted()) return;
+  const url = blobUrl(bytes);
   webamp.setSkinFromUrl(url);
+  await webamp.skinIsLoaded();
+  URL.revokeObjectURL(url);
+  if (ticket !== latestChange) return;
   remember(skin);
   writeJson(KEYS.current, skin);
   void emitTo("picker", "skin-changed", skin);
-  await webamp.skinIsLoaded();
-  URL.revokeObjectURL(url);
 }
 
 /** After launch: swap in a fresh random skin, unless the user kept one. */
 export async function swapInRandomSkin(webamp: Webamp): Promise<void> {
-  const current = readJson<Skin | null>(KEYS.current, null);
-  if (readJson<boolean>(KEYS.keep, false) && current) {
+  const current = currentSkin();
+  if (isKept() && current) {
     // Kept but not in the cache (evicted, or first kept offline): fetch it.
     if (!(await invoke<string[]>("cached_skins")).includes(current.md5) && current.download_url) {
       await applySkin(webamp, current);
     }
     return;
   }
-  await applySkin(webamp, await randomSkin(current?.md5));
+  // Ticking "Keep this skin" while this is in flight keeps the launch skin.
+  await applySkin(webamp, randomSkin(current?.md5), () => !isKept());
 }
 
 /** The entry this app adds to Webamp's Options > Skins menu. */
@@ -224,9 +248,6 @@ export function connectPicker(webamp: Webamp): void {
   };
   void listen<Skin>("pick-skin", ({ payload }) => void applySkin(webamp, payload).catch(report));
   void listen("random-skin", () => {
-    const current = readJson<Skin | null>(KEYS.current, null);
-    void randomSkin(current?.md5)
-      .then((skin) => applySkin(webamp, skin))
-      .catch(report);
+    void applySkin(webamp, randomSkin(currentSkin()?.md5)).catch(report);
   });
 }
