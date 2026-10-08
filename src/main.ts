@@ -28,6 +28,13 @@ if (!Webamp.browserIsSupported()) {
       // "InfinityNaN:NaNNaN" for tracks it has not opened yet.
       duration: 0,
     })),
+    // Milkdrop starts closed (Ata, 2026-10-08): open, it costs about 285 MB.
+    windowLayout: {
+      main: { position: { top: 0, left: 0 } },
+      equalizer: { position: { top: 116, left: 0 } },
+      playlist: { position: { top: 232, left: 0 } },
+      milkdrop: { position: { top: 348, left: 0 }, closed: true },
+    },
   });
   webamp
     .renderWhenReady(container)
