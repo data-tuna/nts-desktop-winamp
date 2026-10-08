@@ -31,5 +31,9 @@ export default defineConfig({
   // network, so the 500 kB default warning does not apply here.
   build: {
     chunkSizeWarningLimit: 2100,
+    // The skin picker is a second window with its own page.
+    rollupOptions: {
+      input: ["index.html", "picker.html"],
+    },
   },
 });

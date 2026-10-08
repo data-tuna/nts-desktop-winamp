@@ -1,5 +1,6 @@
 import Webamp from "webamp/butterchurn";
 import { getCurrentWindow, LogicalSize } from "@tauri-apps/api/window";
+import { connectPicker, launchSkin, PICKER_MENU_ENTRY, swapInRandomSkin } from "./skins";
 
 // Always start from streams.radiomast.io: it redirects to a regional edge
 // host with CORS on every hop. See AGENTS.md, Invariants.
@@ -19,8 +20,15 @@ if (!container) {
 if (!Webamp.browserIsSupported()) {
   container.textContent = "This WebView cannot run Webamp.";
 } else {
-  // No initialSkin: Webamp falls back to the base skin bundled with the npm package.
+  void launchSkin().then(start);
+}
+
+/** `initialSkin` undefined falls back to the base skin bundled with Webamp. */
+function start(initialSkin: { url: string } | undefined): void {
+  if (!container) return;
   const webamp = new Webamp({
+    initialSkin,
+    availableSkins: [PICKER_MENU_ENTRY],
     initialTracks: STREAMS.map((stream) => ({
       ...stream,
       metaData: { artist: "", title: stream.defaultName },
@@ -43,6 +51,11 @@ if (!Webamp.browserIsSupported()) {
       // Autoplay with no click relies on WebView2's
       // --autoplay-policy=no-user-gesture-required (tauri.conf.json).
       webamp.play();
+      connectPicker(webamp);
+      // Offline, the launch skin from the cache simply stays.
+      swapInRandomSkin(webamp).catch((error: unknown) =>
+        console.error("No new skin this launch", error),
+      );
     })
     .catch((error: unknown) => {
       console.error("Webamp failed to render", error);
