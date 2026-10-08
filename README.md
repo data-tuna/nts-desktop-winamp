@@ -11,9 +11,12 @@ you listen a lot, support the station directly:
 [nts.live/supporters](https://www.nts.live/supporters).
 
 Status: early. The app opens a frameless Webamp window in its default skin
-and starts NTS 1 on its own. Milkdrop starts closed and opens from Webamp.
-Switching channels, the skins and the show titles are still to come. Windows
-comes first, then macOS.
+and starts NTS 1 on its own. Switch channels with next or previous, by
+double-clicking NTS 1 or NTS 2 in the playlist, or with the 1 and 2 keys. If
+the stream drops, it reconnects to the same channel by itself. Volume and
+which windows are open carry over to the next launch; the channel does not,
+it always starts on NTS 1. Milkdrop starts closed and opens from Webamp. The
+skins and the show titles are still to come. Windows comes first, then macOS.
 
 ## Credits
 

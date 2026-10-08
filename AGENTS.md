@@ -93,9 +93,17 @@ for ideas is fine; copying is not.
 
 ## Gotchas
 
-**Webamp reports a live stream's duration as 0.** The seek bar is dead and
-the time display counts up from zero. That is expected for a radio stream,
-not a bug to fix.
+**Webamp reports a live stream's duration as 0.** The time display counts up
+from zero, which is expected for a radio stream. Seeking would restart the
+stream, so `styles.css` hides the seek bar with `display: none`; `visibility`
+does not work, because Webamp forces the thumb visible while playing.
+
+**Webamp skips to the next track when a stream fails.** Its media layer turns
+every audio error into "ended", and "ended" dispatches next, so a network drop
+on NTS 1 used to start NTS 2. `main.ts` replaces that listener: a drop, or a
+clock that has not moved for 10 s while playing, reloads the same channel with
+backoff (1, 2, 4, then every 8 s). Pause and stop are left alone. Next on
+NTS 2 and previous on NTS 1 wrap to the other channel instead of stopping.
 
 **ICY titles are empty on these streams.** Webamp does not read ICY metadata
 anyway. The track title comes from the NTS live API or the fallback.
@@ -126,10 +134,12 @@ never makes up that distance, so the point you grabbed ends up a few pixels
 from the cursor. Starting the drag on the press instead would break
 double-click shade. Not fixed yet.
 
-**Fitting the window uses Webamp internals.** `main.ts` listens with
-`webamp.__onStateChange` and moves windows with an `UPDATE_WINDOW_POSITIONS`
-dispatch on `webamp.store`. Neither is public API; check both when upgrading
-Webamp.
+**`main.ts` leans on Webamp internals.** It listens with
+`webamp.__onStateChange`, moves windows with an `UPDATE_WINDOW_POSITIONS`
+dispatch on `webamp.store`, replaces the "ended" listeners in
+`webamp.media._emitter`, passes `__customMiddlewares`, and dispatches
+`PLAY_TRACK` / `BUFFER_TRACK` and reads `IS_STOPPED`. None of it is public
+API; check all of it when upgrading Webamp.
 
 **`tauri dev` needs port 1420 free.** Vite runs with `strictPort`, so a
 leftover dev server makes the next launch fail rather than pick another port.
@@ -152,6 +162,18 @@ The environment variable carries the autoplay flag too, so a debug run plays
 the way a normal one does. `window-shot.ps1` captures only the app's own
 window (transparent areas come out black), never the desktop behind it.
 `ram.ps1` sums the app and all of its WebView2 processes.
+
+**Two instances share one WebView2 profile.** A second copy of the app (another
+checkout, another agent) joins the first one's browser process, its DevTools
+port and its `localStorage`, so probes can land in the wrong window. Give each
+run its own profile with `$env:WEBVIEW2_USER_DATA_FOLDER = "$PWD\.wv2-test"`
+and its own port. `window-shot.ps1` and `ram.ps1` pick a process by name, so
+they cannot tell two instances apart either.
+
+To test reconnecting without cutting the machine's network, add
+`--proxy-server=http://127.0.0.1:<port>` to the browser arguments and run a
+CONNECT proxy you can stop. DevTools' offline emulation does not interrupt a
+stream that is already playing, so it proves nothing here.
 
 ## Where the decisions are
 
