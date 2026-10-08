@@ -1,5 +1,15 @@
 import { emitTo, listen } from "@tauri-apps/api/event";
-import { KEYS, readJson, searchSkins, skinName, writeJson, type Skin } from "./skins";
+import { openUrl } from "@tauri-apps/plugin-opener";
+import {
+  currentSkin,
+  isKept,
+  KEYS,
+  readJson,
+  searchSkins,
+  skinName,
+  writeJson,
+  type Skin,
+} from "./skins";
 
 function element<T extends HTMLElement>(id: string): T {
   const found = document.getElementById(id);
@@ -26,7 +36,6 @@ function setListStatus(text: string): void {
 }
 
 const favourites = () => readJson<Skin[]>(KEYS.favourites, []);
-const currentSkin = () => readJson<Skin | null>(KEYS.current, null);
 
 function render(): void {
   const skin = currentSkin();
@@ -36,7 +45,7 @@ function render(): void {
   favourite.setAttribute("aria-pressed", String(isFavourite));
   // The base skin and skins known only by md5 cannot be favourited.
   favourite.disabled = !skin?.download_url;
-  keep.checked = readJson<boolean>(KEYS.keep, false);
+  keep.checked = isKept();
   for (const button of results.querySelectorAll("button")) {
     button.setAttribute("aria-current", String(button.dataset.md5 === skin?.md5));
   }
@@ -132,6 +141,14 @@ void listen("skin-changed", () => {
 void listen<string>("skin-error", ({ payload }) => {
   status.textContent = `Could not change the skin: ${payload}`;
 });
+
+// The WebView opens no new windows: footer links go to the system browser.
+for (const link of document.querySelectorAll<HTMLAnchorElement>("a[href^='https://']")) {
+  link.addEventListener("click", (event) => {
+    event.preventDefault();
+    void openUrl(link.href);
+  });
+}
 
 showFavourites();
 query.focus();

@@ -85,12 +85,15 @@ from `webamp/butterchurn`. It renders classic `.wsz` skins only.
   random APPROVED, non-NSFW skin is fetched from the Museum and swapped in.
   Offline, the cached skin stays.
 - **The cache is plain files** in `%LOCALAPPDATA%\com.datatuna.ntswinamp\skins`,
-  named by md5, written and read through three Rust commands. Over 200 MB,
-  the oldest files go first. Skin metadata (name, screenshot, URL) sits in
+  named by md5, written and read through three Rust commands that only the
+  main window may call. Over 200 MB, the oldest downloads go first, kept and
+  favourite skins included; they download again when next used. Skin metadata (name, screenshot, URL) sits in
   `localStorage`.
-- **One Museum request per launch.** The approved count is remembered, so a
-  random skin costs a single `skins(filter: APPROVED, offset: random)` query
-  and one download.
+- **One Museum query per launch, usually.** The approved count is
+  remembered, so a random skin costs one `skins(filter: APPROVED, offset:
+  random)` query and one download. The first launch, which has no count
+  yet, makes two queries, and a draw that lands on the current skin or an
+  NSFW one draws again, at most three times.
 - **The browser is its own window**, opened from Webamp's Options > Skins >
   "Skin Browser..." or Alt+S, Winamp's shortcut for it. Fitting it into the
   main window would fight the code that sizes that window to Webamp. Open,

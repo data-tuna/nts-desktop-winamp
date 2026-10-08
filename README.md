@@ -22,9 +22,9 @@ macOS.
 - [Webamp](https://github.com/captbaritone/webamp) by Jordan Eldredge and
   contributors is the player: Winamp 2 rebuilt in HTML5 and JavaScript (MIT).
 - The [Winamp Skin Museum](https://skins.webamp.org/) hosts the skins. They are
-  fan works by their original authors. The app downloads them at runtime and
-  caches up to 200 MB of them on your machine. None are included in this repository or the
-  installer.
+  fan works by their original authors. The app downloads them at runtime
+  and caches up to 200 MB of them on your machine. None are included in this
+  repository or the installer.
 - [Tauri](https://tauri.app/) is the desktop shell.
 - Streams will come from NTS via `streams.radiomast.io`.
 

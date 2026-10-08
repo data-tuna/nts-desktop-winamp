@@ -146,6 +146,11 @@ body. The match is on the label text, so keep the two in step.
 **Webamp shows an `alert()` when a skin fails to parse.** No Museum skin has
 done so yet; if one does, the user sees the dialog and keeps the old skin.
 
+**The WebView opens no new windows.** A `target="_blank"` link does
+nothing; the picker sends its links through the opener plugin, and
+`capabilities/picker.json` allows exactly those URLs. Add a URL there when
+you add a link.
+
 **`tauri dev` needs port 1420 free.** Vite runs with `strictPort`, so a
 leftover dev server makes the next launch fail rather than pick another port.
 
