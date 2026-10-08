@@ -10,9 +10,9 @@ it starts.
 you listen a lot, support the station directly:
 [nts.live/supporters](https://www.nts.live/supporters).
 
-Status: early. None of that works yet. The repository holds the scaffold, a
-Tauri window running Webamp with its default skin and no stream. Windows comes
-first, then macOS.
+Status: early. The app opens a frameless Webamp window in its default skin
+and starts NTS 1 on its own, with Milkdrop running. Switching channels, the
+skins and the show titles are still to come. Windows comes first, then macOS.
 
 ## Credits
 
