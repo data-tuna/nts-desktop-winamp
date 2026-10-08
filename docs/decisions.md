@@ -6,6 +6,34 @@ the evidence.
 
 ## Stack
 
+### Spike result: Tauri go (ATA-67, 2026-10-08)
+
+The spike ran the release build on Windows 11 from `http://tauri.localhost`
+and checked each risk in the running app:
+
+- **Autoplay:** NTS 1 starts with no click, with
+  `--autoplay-policy=no-user-gesture-required` in `additionalBrowserArgs`.
+  The page reported no user activation while the stream played.
+- **CORS:** `streams.radiomast.io` and its edge redirect play through
+  Webamp's `crossOrigin="anonymous"` element. `stream-relay-geo.ntslive.net`
+  fails from the same page (`fetch`: `TypeError: Failed to fetch`; audio:
+  `MEDIA_ELEMENT_ERROR` code 4) because its 302 sends no
+  `Access-Control-Allow-Origin`.
+- **Milkdrop:** Butterchurn renders and reacts. All four AnalyserNodes in the
+  page read live signal (about 330 to 400 of 512 bins non-zero).
+- **Window:** frameless and transparent, sized to Webamp's windows, dragged by
+  any title bar or the main window's body, resized when windows open or
+  close. Transparent gaps show the desktop but still take clicks;
+  click-through is not done.
+- **Footprint:** NSIS installer 1.50 MiB, MSI 2.02 MiB. Private memory across
+  the app and its WebView2 processes: 266 MB stopped, 269 MB playing, 551 to
+  722 MB playing with Milkdrop open. Milkdrop accounts for about 285 MB of
+  that, in the renderer and GPU processes.
+
+Nothing here needs Electron, which would bring its own Chromium and cost at
+least as much memory for the same page. The memory cost is Milkdrop's, so
+whether it opens by default is a product call for Ata.
+
 ### Licence: MIT (ATA-66, 2026-10-08)
 
 MIT, to match Webamp. The issue suggested it and nothing in the dependencies

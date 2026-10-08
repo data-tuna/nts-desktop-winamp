@@ -26,16 +26,26 @@ Written in English.
 
 ## Layout
 
-    src/                  The frontend: Vite + TypeScript. main.ts mounts Webamp.
+    src/                  The frontend: Vite + TypeScript. main.ts mounts Webamp
+                          and keeps the OS window fitted to Webamp's windows.
     src-tauri/            The Rust shell (Tauri 2). Window config in tauri.conf.json,
                           permissions in capabilities/.
     src-tauri/icons/      App icons. Still the Tauri defaults; see Known gaps.
     docs/decisions.md     Stack choice, research findings, and why.
     .github/workflows/    CI. Runs on windows-latest.
+    tools/                Scripts for observing the running app: window
+                          screenshots, RAM, and DevTools-protocol probes.
 
 The player is [Webamp](https://github.com/captbaritone/webamp) (npm `webamp`
-2.x). Milkdrop visuals, once added, come from `webamp/butterchurn`. Tauri
+2.x), imported as `webamp/butterchurn` so the Milkdrop window works. Tauri
 renders the frontend in the WebView2 runtime that ships with Windows.
+
+The window is frameless and transparent. Webamp draws its main, equaliser,
+playlist and Milkdrop windows inside it, and `main.ts` resizes the OS window
+to the box around whichever are open. Pressing any `.draggable` element
+(Webamp's title bars, and the main window's body) drags the whole OS window
+through `startDragging` once the pointer moves 3 px, so Webamp's windows
+never move relative to each other and double-clicks still reach Webamp.
 
 ## Commands
 
@@ -90,12 +100,58 @@ not a bug to fix.
 **ICY titles are empty on these streams.** Webamp does not read ICY metadata
 anyway. The track title comes from the NTS live API or the fallback.
 
-**Webamp is ~920 kB minified.** `vite.config.ts` raises the chunk warning
-limit to 1024 kB because the bundle loads from disk. Do not raise it further
-to hide a real regression.
+**Webamp with Butterchurn is ~2.0 MB minified.** `vite.config.ts` sets the
+chunk warning limit to 2100 kB for that reason: about 1.1 MB of it is
+Butterchurn and its presets. Do not raise it further to hide a real
+regression.
+
+**`webamp/butterchurn` ships without its types.** Its `package.json` points
+at a `butterchurn.d.ts` that is not in the package, so
+`src/webamp-butterchurn.d.ts` reuses the main entry's types. Drop the shim if
+a later Webamp release fixes it.
+
+**`additionalBrowserArgs` replaces Tauri's WebView2 defaults.** Tauri
+normally passes `--disable-features=msWebOOUI,msPdfOOUI,msSmartScreenProtection`;
+setting the option drops that, so `tauri.conf.json` repeats it before
+`--autoplay-policy=no-user-gesture-required`. Keep both when adding flags.
+
+**Transparent gaps catch clicks.** When the equaliser is closed between the
+main window and the playlist, the gap is see-through but still belongs to the
+app window: clicks there do not reach the desktop. Click-through needs
+platform code and is not done.
+
+**A drag lags the pointer by a few pixels.** The OS drag starts only after
+the pointer has moved 3 px and `startDragging` has returned, and the window
+never makes up that distance, so the point you grabbed ends up a few pixels
+from the cursor. Starting the drag on the press instead would break
+double-click shade. Not fixed yet.
+
+**Fitting the window uses Webamp internals.** `main.ts` listens with
+`webamp.__onStateChange` and moves windows with an `UPDATE_WINDOW_POSITIONS`
+dispatch on `webamp.store`. Neither is public API; check both when upgrading
+Webamp.
 
 **`tauri dev` needs port 1420 free.** Vite runs with `strictPort`, so a
 leftover dev server makes the next launch fail rather than pick another port.
+
+## Observing the running app
+
+Webamp's `<audio>` element is never attached to the DOM, so it does not show
+up in a selector. To look inside the app, start it with WebView2's DevTools
+port open, then use the probes in `tools/`:
+
+    $env:WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS = "--remote-debugging-port=9333 --autoplay-policy=no-user-gesture-required"
+    src-tauri\target\release\nts-desktop-winamp.exe
+    node tools/cdp.mjs 9333 "location.href"     Any expression, in the page
+    node tools/cdp-audio.mjs 9333               Every audio element's state
+    node tools/cdp-analysers.mjs 9333           Signal in every AnalyserNode
+    powershell -File tools/window-shot.ps1 nts-desktop-winamp shot.png
+    powershell -File tools/ram.ps1 nts-desktop-winamp
+
+The environment variable carries the autoplay flag too, so a debug run plays
+the way a normal one does. `window-shot.ps1` captures only the app's own
+window (transparent areas come out black), never the desktop behind it.
+`ram.ps1` sums the app and all of its WebView2 processes.
 
 ## Where the decisions are
 
@@ -135,6 +191,9 @@ CSP should allow exactly those origins plus what Webamp needs (`blob:`,
 
 **Icons are Tauri's defaults.** They need replacing before the installer
 issue, with something that does not borrow the NTS logo.
+
+**Webamp still says 192 kbps.** The streams are 256 kbps (`icy-br: 256`);
+the display is Webamp's default, not a measurement.
 
 **CI does not build the Rust side.** It runs typecheck, lint, the frontend
 build and `cargo fmt --check`. A full `tauri build` on `windows-latest` waits

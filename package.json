@@ -15,6 +15,7 @@
     "tauri": "tauri"
   },
   "dependencies": {
+    "@tauri-apps/api": "^2.12.1",
     "webamp": "^2.3.1"
   },
   "devDependencies": {

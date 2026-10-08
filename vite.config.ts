@@ -26,9 +26,10 @@ export default defineConfig({
       ignored: ["**/src-tauri/**"],
     },
   },
-  // 4. Webamp alone minifies to ~920 kB. The app loads it from disk, not over
-  // a network, so the 500 kB default warning does not apply here.
+  // 4. Webamp with Butterchurn and its Milkdrop presets minifies to ~2.0 MB
+  // (Webamp alone is ~920 kB). The app loads it from disk, not over a
+  // network, so the 500 kB default warning does not apply here.
   build: {
-    chunkSizeWarningLimit: 1024,
+    chunkSizeWarningLimit: 2100,
   },
 });
