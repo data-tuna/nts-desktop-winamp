@@ -34,7 +34,7 @@ Written in English.
     docs/decisions.md     Stack choice, research findings, and why.
     .github/workflows/    CI. Runs on windows-latest.
     tools/                Scripts for observing the running app: window
-                          screenshots, RAM, and a DevTools-protocol probe.
+                          screenshots, RAM, and DevTools-protocol probes.
 
 The player is [Webamp](https://github.com/captbaritone/webamp) (npm `webamp`
 2.x), imported as `webamp/butterchurn` so the Milkdrop window works. Tauri
@@ -44,8 +44,8 @@ The window is frameless and transparent. Webamp draws its main, equaliser,
 playlist and Milkdrop windows inside it, and `main.ts` resizes the OS window
 to the box around whichever are open. Pressing any `.draggable` element
 (Webamp's title bars, and the main window's body) drags the whole OS window
-through `startDragging`, so Webamp's windows never move relative to each
-other.
+through `startDragging` once the pointer moves 3 px, so Webamp's windows
+never move relative to each other and double-clicks still reach Webamp.
 
 ## Commands
 
@@ -100,10 +100,6 @@ not a bug to fix.
 **ICY titles are empty on these streams.** Webamp does not read ICY metadata
 anyway. The track title comes from the NTS live API or the fallback.
 
-**Webamp is ~920 kB minified.** `vite.config.ts` raises the chunk warning
-limit to 1024 kB because the bundle loads from disk. Do not raise it further
-to hide a real regression.
-
 **Webamp with Butterchurn is ~2.0 MB minified.** `vite.config.ts` sets the
 chunk warning limit to 2100 kB for that reason: about 1.1 MB of it is
 Butterchurn and its presets. Do not raise it further to hide a real
@@ -139,8 +135,7 @@ up in a selector. To look inside the app, start it with WebView2's DevTools
 port open, then use the probes in `tools/`:
 
     $env:WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS = "--remote-debugging-port=9333 --autoplay-policy=no-user-gesture-required"
-    src-tauri	argetelease
-ts-desktop-winamp.exe
+    src-tauri\target\release\nts-desktop-winamp.exe
     node tools/cdp.mjs 9333 "location.href"     Any expression, in the page
     node tools/cdp-audio.mjs 9333               Every audio element's state
     node tools/cdp-analysers.mjs 9333           Signal in every AnalyserNode

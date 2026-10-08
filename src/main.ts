@@ -8,6 +8,9 @@ const STREAMS = [
   { url: "https://streams.radiomast.io/nts2", defaultName: "NTS 2" },
 ];
 
+// How far the pointer moves on a title bar before the press becomes a drag.
+const DRAG_THRESHOLD_PX = 3;
+
 const container = document.getElementById("app");
 if (!container) {
   throw new Error("#app is missing from index.html");
@@ -48,7 +51,11 @@ function followWebampWindows(webamp: Webamp): void {
   const appWindow = getCurrentWindow();
 
   // Webamp marks every title bar part with `.draggable`. Catch the press
-  // before Webamp's own handler so the whole OS window moves instead.
+  // before Webamp's own handler, which would move the window inside the page,
+  // and move the whole OS window instead. The OS drag only starts once the
+  // pointer has moved: starting it on the press swallows the mouseup, and
+  // with it the double-click that toggles shade mode.
+  let press: { x: number; y: number } | null = null;
   window.addEventListener(
     "mousedown",
     (event) => {
@@ -56,10 +63,23 @@ function followWebampWindows(webamp: Webamp): void {
       if (!event.target.classList.contains("draggable")) return;
       event.preventDefault();
       event.stopPropagation();
-      void appWindow.startDragging();
+      press = { x: event.screenX, y: event.screenY };
     },
     { capture: true },
   );
+  window.addEventListener("mousemove", (event) => {
+    if (!press) return;
+    if ((event.buttons & 1) === 0) {
+      press = null;
+      return;
+    }
+    if (Math.hypot(event.screenX - press.x, event.screenY - press.y) < DRAG_THRESHOLD_PX) return;
+    press = null;
+    void appWindow.startDragging();
+  });
+  window.addEventListener("mouseup", () => {
+    press = null;
+  });
 
   webamp.onClose(() => void appWindow.close());
   webamp.onMinimize(() => void appWindow.minimize());
@@ -80,6 +100,8 @@ function followWebampWindows(webamp: Webamp): void {
       }
       await appWindow.setSize(new LogicalSize(box.width, box.height));
       lastLayout = `0,0,${box.width},${box.height}`;
+    } catch (error: unknown) {
+      console.error("Could not fit the window to Webamp", error);
     } finally {
       fitting = false;
     }
@@ -107,11 +129,12 @@ function webampBounds(): { left: number; top: number; width: number; height: num
     bottom = Math.max(bottom, rect.bottom);
   }
   if (left === Infinity) return null;
+  // Round the edges, not the size, so a fractional rect never loses a pixel.
   return {
     left: Math.round(left),
     top: Math.round(top),
-    width: Math.round(right - left),
-    height: Math.round(bottom - top),
+    width: Math.round(right) - Math.round(left),
+    height: Math.round(bottom) - Math.round(top),
   };
 }
 

@@ -22,8 +22,9 @@ and checked each risk in the running app:
 - **Milkdrop:** Butterchurn renders and reacts. All four AnalyserNodes in the
   page read live signal (about 330 to 400 of 512 bins non-zero).
 - **Window:** frameless and transparent, sized to Webamp's windows, dragged by
-  any title bar, resized when windows open or close. Transparent gaps show
-  the desktop but still take clicks; click-through is not done.
+  any title bar or the main window's body, resized when windows open or
+  close. Transparent gaps show the desktop but still take clicks;
+  click-through is not done.
 - **Footprint:** NSIS installer 1.50 MiB, MSI 2.02 MiB. Private memory across
   the app and its WebView2 processes: 266 MB stopped, 269 MB playing, 551 to
   722 MB playing with Milkdrop open. Milkdrop accounts for about 285 MB of

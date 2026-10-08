@@ -8,6 +8,6 @@ ws.send(JSON.stringify({ id: 1, method: "Runtime.evaluate", params: { expression
 ws.addEventListener("message", (m) => {
   const msg = JSON.parse(m.data);
   if (msg.id !== 1) return;
-  console.log(JSON.stringify(msg.result.result?.value ?? msg.result, null, 1));
+  console.log(JSON.stringify(msg.error ?? msg.result.result?.value ?? msg.result, null, 1));
   ws.close();
 });

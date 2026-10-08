@@ -5,6 +5,7 @@
 param([string]$Name)
 $all = Get-CimInstance Win32_Process | Select-Object ProcessId, ParentProcessId, Name
 $root = $all | Where-Object { $_.Name -eq "$Name.exe" } | Select-Object -First 1
+if (-not $root) { Write-Error "$Name.exe is not running"; exit 1 }
 $ids = New-Object System.Collections.Generic.List[int]
 $ids.Add([int]$root.ProcessId)
 for ($i = 0; $i -lt $ids.Count; $i++) {

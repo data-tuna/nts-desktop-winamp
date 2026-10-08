@@ -13,7 +13,8 @@ public static class W {
 }
 "@
 [W]::SetProcessDPIAware() | Out-Null
-$p = Get-Process -Name $Name | Where-Object { $_.MainWindowHandle -ne 0 } | Select-Object -First 1
+$p = Get-Process -Name $Name -ErrorAction SilentlyContinue | Where-Object { $_.MainWindowHandle -ne 0 } | Select-Object -First 1
+if (-not $p) { Write-Error "$Name has no window"; exit 1 }
 $r = New-Object RECT
 [W]::GetWindowRect($p.MainWindowHandle, [ref]$r) | Out-Null
 $bmp = New-Object System.Drawing.Bitmap ($r.R - $r.L), ($r.B - $r.T)
