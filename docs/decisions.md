@@ -6,6 +6,12 @@ the evidence.
 
 ## Stack
 
+### Milkdrop starts closed (Ata, 2026-10-08)
+
+Milkdrop costs about 285 MB of private memory while it is open (see the spike
+result below), so the app launches with it closed. It is still in the bundle
+and opens from Webamp.
+
 ### Spike result: Tauri go (ATA-67, 2026-10-08)
 
 The spike ran the release build on Windows 11 from `http://tauri.localhost`
