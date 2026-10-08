@@ -1,0 +1,143 @@
+:root {
+  color-scheme: dark;
+  font: 13px/1.4 "Segoe UI", system-ui, sans-serif;
+  background: #15161b;
+  color: #d8d8e0;
+}
+
+body {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+}
+
+header,
+form,
+footer {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  padding: 10px 14px;
+}
+
+header {
+  border-bottom: 1px solid #262833;
+}
+
+.now {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.now strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: #fff;
+}
+
+.label,
+#status,
+footer {
+  color: #8a8c99;
+  font-size: 12px;
+}
+
+button,
+input[type="search"] {
+  font: inherit;
+  color: inherit;
+  background: #22242d;
+  border: 1px solid #343745;
+  border-radius: 4px;
+  padding: 5px 10px;
+}
+
+button {
+  cursor: pointer;
+  transition: transform 120ms ease-out;
+}
+
+button:active {
+  transform: scale(0.97);
+}
+
+button[aria-pressed="true"] {
+  color: #ffd25e;
+  border-color: #6b5a2a;
+}
+
+.keep {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+  white-space: nowrap;
+}
+
+#query {
+  flex: 1;
+}
+
+#status {
+  margin: 0 14px;
+  min-height: 1.4em;
+}
+
+.grid {
+  flex: 1;
+  overflow-y: auto;
+  list-style: none;
+  margin: 0;
+  padding: 6px 14px 14px;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 12px;
+  align-content: start;
+}
+
+.grid button {
+  width: 100%;
+  padding: 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  text-align: left;
+}
+
+.grid img {
+  width: 100%;
+  aspect-ratio: 275 / 348;
+  object-fit: cover;
+  object-position: top;
+  image-rendering: pixelated;
+  background: #000;
+}
+
+.grid span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 12px;
+}
+
+.grid button[aria-current="true"] {
+  border-color: #6e7bff;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  button:hover {
+    border-color: #50546a;
+  }
+}
+
+footer {
+  border-top: 1px solid #262833;
+  display: block;
+}
+
+a {
+  color: #9aa4ff;
+}

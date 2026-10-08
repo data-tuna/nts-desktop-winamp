@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Skin Browser (nts-desktop-winamp, unofficial)</title>
+    <link rel="stylesheet" href="/src/picker.css" />
+    <script type="module" src="/src/picker.ts"></script>
+  </head>
+  <body>
+    <header>
+      <div class="now">
+        <span class="label">Now wearing</span>
+        <strong id="current">Base skin</strong>
+      </div>
+      <button id="favourite" type="button" aria-pressed="false">☆ Favourite</button>
+      <label class="keep"><input id="keep" type="checkbox" /> Keep this skin</label>
+      <button id="random" type="button">Random</button>
+    </header>
+    <form id="search">
+      <input id="query" type="search" placeholder="Search the Winamp Skin Museum" autocomplete="off" />
+    </form>
+    <p id="status" role="status"></p>
+    <ul id="results" class="grid"></ul>
+    <footer>
+      Skins from the <a href="https://skins.webamp.org/" target="_blank" rel="noreferrer">Winamp Skin Museum</a>,
+      made by their authors. Enjoying NTS?
+      <a href="https://www.nts.live/supporters" target="_blank" rel="noreferrer">Support them</a>.
+    </footer>
+  </body>
+</html>
