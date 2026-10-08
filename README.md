@@ -10,18 +10,20 @@ it starts.
 you listen a lot, support the station directly:
 [nts.live/supporters](https://www.nts.live/supporters).
 
-Status: early. The app opens a frameless Webamp window in its default skin
-and starts NTS 1 on its own. Milkdrop starts closed and opens from Webamp.
-Switching channels, the skins and the show titles are still to come. Windows
-comes first, then macOS.
+Status: early. The app opens a frameless Webamp window and starts NTS 1 on
+its own, wearing a random skin from the Skin Museum. To search for a skin,
+keep favourites or keep one skin, open Options > Skins > Skin Browser, or
+press Alt+S. Milkdrop starts closed and opens from Webamp. Switching
+channels and the show titles are still to come. Windows comes first, then
+macOS.
 
 ## Credits
 
 - [Webamp](https://github.com/captbaritone/webamp) by Jordan Eldredge and
   contributors is the player: Winamp 2 rebuilt in HTML5 and JavaScript (MIT).
 - The [Winamp Skin Museum](https://skins.webamp.org/) hosts the skins. They are
-  fan works by their original authors. The app will download them at runtime
-  and cache them on your machine. None are included in this repository or the
+  fan works by their original authors. The app downloads them at runtime and
+  caches up to 200 MB of them on your machine. None are included in this repository or the
   installer.
 - [Tauri](https://tauri.app/) is the desktop shell.
 - Streams will come from NTS via `streams.radiomast.io`.

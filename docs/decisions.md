@@ -77,6 +77,27 @@ from `webamp/butterchurn`. It renders classic `.wsz` skins only.
 
 ## Product
 
+### Skins: disk cache, random on launch, a separate browser window (ATA-70, 2026-10-08)
+
+- **Startup never waits on the network.** The launch skin comes from the
+  local cache: the kept skin, or a random cached one other than the last.
+  An empty cache means Webamp's base skin. Once audio is playing, one
+  random APPROVED, non-NSFW skin is fetched from the Museum and swapped in.
+  Offline, the cached skin stays.
+- **The cache is plain files** in `%LOCALAPPDATA%\com.datatuna.ntswinamp\skins`,
+  named by md5, written and read through three Rust commands. Over 200 MB,
+  the oldest files go first. Skin metadata (name, screenshot, URL) sits in
+  `localStorage`.
+- **One Museum request per launch.** The approved count is remembered, so a
+  random skin costs a single `skins(filter: APPROVED, offset: random)` query
+  and one download.
+- **The browser is its own window**, opened from Webamp's Options > Skins >
+  "Skin Browser..." or Alt+S, Winamp's shortcut for it. Fitting it into the
+  main window would fight the code that sizes that window to Webamp. Open,
+  it costs about 60 MB; closed, nothing.
+- **"Keep this skin"** turns random-on-launch off until it is cleared;
+  picking another skin while it is on keeps the new one.
+
 ### Random skin on launch, three phases (Ata, 2026-10-08)
 
 - A random approved Skin Museum skin loads on every launch, with a skin

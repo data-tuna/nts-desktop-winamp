@@ -15,8 +15,8 @@ NTS 2 with one click, and loads a random classic skin from the
 player for someone else's radio station, wearing someone else's skins. NTS
 does not endorse it. Nothing in the window, the installer, the icon or the
 README may use the NTS logo or name in a way that reads as official, and the
-app must link listeners to `https://www.nts.live/supporters` (the README does
-already; the app does not yet, see Known gaps).
+app must link listeners to `https://www.nts.live/supporters` (the README and
+the skin browser's footer do).
 
 Phases: **1 is Windows**, 2 is macOS, 3 is NTS Infinite Mixtapes plus Windows
 Media Player skins. Windows comes first, and nothing in phase 1 should make
@@ -28,8 +28,11 @@ Written in English.
 
     src/                  The frontend: Vite + TypeScript. main.ts mounts Webamp
                           and keeps the OS window fitted to Webamp's windows.
+                          skins.ts picks, caches and applies Museum skins.
+                          picker.ts is the skin browser window (picker.html).
     src-tauri/            The Rust shell (Tauri 2). Window config in tauri.conf.json,
-                          permissions in capabilities/.
+                          permissions in capabilities/. lib.rs holds the skin
+                          cache commands.
     src-tauri/icons/      App icons. Still the Tauri defaults; see Known gaps.
     docs/decisions.md     Stack choice, research findings, and why.
     .github/workflows/    CI. Runs on windows-latest.
@@ -131,6 +134,18 @@ double-click shade. Not fixed yet.
 dispatch on `webamp.store`. Neither is public API; check both when upgrading
 Webamp.
 
+**`search_skins` returns rejected, unreviewed and NSFW skins.** Only the
+`skins(filter: APPROVED)` query is pre-filtered. `searchSkins` in `skins.ts`
+keeps a hit only if `nsfw` is false and every review on it is `APPROVED`.
+
+**The skin browser hooks Webamp's menu.** Its entry is an `availableSkins`
+item whose url is a placeholder; a capture-phase click listener in
+`skins.ts` stops Webamp fetching it and closes the menu by clicking the
+body. The match is on the label text, so keep the two in step.
+
+**Webamp shows an `alert()` when a skin fails to parse.** No Museum skin has
+done so yet; if one does, the user sees the dialog and keeps the old skin.
+
 **`tauri dev` needs port 1420 free.** Vite runs with `strictPort`, so a
 leftover dev server makes the next launch fail rather than pick another port.
 
@@ -145,12 +160,15 @@ port open, then use the probes in `tools/`:
     node tools/cdp.mjs 9333 "location.href"     Any expression, in the page
     node tools/cdp-audio.mjs 9333               Every audio element's state
     node tools/cdp-analysers.mjs 9333           Signal in every AnalyserNode
+    node tools/cdp-shot.mjs 9333 shot.png [picker]   What the renderer paints
     powershell -File tools/window-shot.ps1 nts-desktop-winamp shot.png
     powershell -File tools/ram.ps1 nts-desktop-winamp
 
 The environment variable carries the autoplay flag too, so a debug run plays
 the way a normal one does. `window-shot.ps1` captures only the app's own
-window (transparent areas come out black), never the desktop behind it.
+window (transparent areas come out black), never the desktop behind it, but
+after a skin change it can return a stale frame still showing the old skin;
+`cdp-shot.mjs` shows what is actually painted.
 `ram.ps1` sums the app and all of its WebView2 processes.
 
 ## Where the decisions are
@@ -185,9 +203,6 @@ as the change that makes them stale.
 scaffold default. Once the stream, skin and now-playing hosts are wired in, a
 CSP should allow exactly those origins plus what Webamp needs (`blob:`,
 `data:`, inline styles).
-
-**No supporters link in the app yet.** The README links
-`nts.live/supporters`; the window will once there is UI beyond Webamp.
 
 **Icons are Tauri's defaults.** They need replacing before the installer
 issue, with something that does not borrow the NTS logo.
