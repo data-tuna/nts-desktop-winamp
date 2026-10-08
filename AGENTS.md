@@ -61,9 +61,11 @@ typecheck knows nothing about.
 **Streams come from `https://streams.radiomast.io/nts1` and `/nts2`.** They
 are MP3 at 256 kbps and send open CORS headers, which Webamp needs because it
 routes audio through Web Audio for the visualiser and equaliser.
-`stream-relay-geo.ntslive.net` redirects to a regional edge without CORS
-headers, so the renderer cannot use it. Never hard-code a regional edge host
-either: they move.
+`stream-relay-geo.ntslive.net/stream` answers with a 302 to radiomast that
+carries no CORS headers, so a cross-origin fetch fails at that first hop.
+radiomast itself then redirects to a regional `audio-edge-*.radiomast.io`
+host, with CORS on every hop. Those edge hosts move, so never hard-code one:
+always start from `streams.radiomast.io`.
 
 **Playback never depends on the now-playing API.** `https://www.nts.live/api/v2/live`
 is undocumented and can change or vanish. When it fails, the titles fall back
