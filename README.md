@@ -54,7 +54,7 @@ The first `tauri dev` compiles about 340 Rust crates and takes a minute or
 two. Later runs reuse the build.
 
 Before opening a PR, run `npm run check` (typecheck, lint, frontend build).
-CI runs the same on `windows-latest`. Conventions for contributors, human or
+CI runs the same on `windows-latest`, plus `cargo fmt --check`. Conventions for contributors, human or
 agent, are in [AGENTS.md](AGENTS.md); the reasoning behind the stack is in
 [docs/decisions.md](docs/decisions.md).
 

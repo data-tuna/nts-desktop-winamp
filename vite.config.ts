@@ -4,17 +4,11 @@ import process from "node:process";
 const host = process.env.TAURI_DEV_HOST;
 
 // https://vite.dev/config/
-export default defineConfig(() => ({
-
-  // Vite options tailored for Tauri development and only applied in `tauri dev` or `tauri build`
+export default defineConfig({
+  // Vite options tailored for Tauri development
   //
   // 1. prevent Vite from obscuring rust errors
   clearScreen: false,
-  // Webamp alone minifies to ~920 kB. The app loads it from disk, not over a
-  // network, so the 500 kB default warning does not apply here.
-  build: {
-    chunkSizeWarningLimit: 1024,
-  },
   // 2. tauri expects a fixed port, fail if that port is not available
   server: {
     port: 1420,
@@ -32,4 +26,9 @@ export default defineConfig(() => ({
       ignored: ["**/src-tauri/**"],
     },
   },
-}));
+  // 4. Webamp alone minifies to ~920 kB. The app loads it from disk, not over
+  // a network, so the 500 kB default warning does not apply here.
+  build: {
+    chunkSizeWarningLimit: 1024,
+  },
+});

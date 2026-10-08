@@ -18,13 +18,11 @@ jobs:
 
       - run: npm ci
 
-      - name: Typecheck
-        run: npm run typecheck
-
+      # The same as `npm run check`, split so a failure names its step.
       - name: Lint
         run: npm run lint
 
-      - name: Frontend build
+      - name: Typecheck and frontend build
         run: npm run build
 
       - name: Rust formatting

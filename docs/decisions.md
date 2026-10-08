@@ -6,6 +6,12 @@ the evidence.
 
 ## Stack
 
+### Licence: MIT (ATA-66, 2026-10-08)
+
+MIT, to match Webamp. The issue suggested it and nothing in the dependencies
+argues otherwise. This rules out copying code from GPL-3.0 projects such as
+Marconio.
+
 ### Tauri 2, not Electron (Ata, 2026-10-08)
 
 The shell is **Tauri 2**: Rust in `src-tauri/`, Vite and TypeScript in `src/`,
@@ -35,15 +41,9 @@ from `webamp/butterchurn`. It renders classic `.wsz` skins only.
 [webamp-desktop](https://github.com/durasj/webamp-desktop) is unmaintained
 (last active 2023, webamp 1.x). It is a reference, not a fork base.
 
-### Licence: MIT (ATA-66)
-
-MIT, to match Webamp. The issue suggested it and nothing in the dependencies
-argues otherwise. This rules out copying code from GPL-3.0 projects such as
-Marconio.
-
 ## Product
 
-### Decisions (Ata, 2026-10-08)
+### Random skin on launch, three phases (Ata, 2026-10-08)
 
 - A random approved Skin Museum skin loads on every launch, with a skin
   picker on top.
@@ -77,7 +77,6 @@ Python downloader, not a player), r-ohan/nts-radio-cli (a Rust TUI).
 
 ## Standing rules
 
-- The app is unofficial. Do not use the NTS logo in a way that looks
-  official, and link to `https://www.nts.live/supporters`.
-- Skins are third-party fan works. Fetch them at runtime and cache them
-  locally, but never commit them to the repo.
+The rules these findings produced (stream hosts, skins never committed, the
+unofficial look, no Marconio code) are kept in one place: the Invariants
+section of [AGENTS.md](../AGENTS.md).

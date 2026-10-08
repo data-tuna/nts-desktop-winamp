@@ -15,7 +15,8 @@ NTS 2 with one click, and loads a random classic skin from the
 player for someone else's radio station, wearing someone else's skins. NTS
 does not endorse it. Nothing in the window, the installer, the icon or the
 README may use the NTS logo or name in a way that reads as official, and the
-app links listeners to `https://www.nts.live/supporters`.
+app must link listeners to `https://www.nts.live/supporters` (the README does
+already; the app does not yet, see Known gaps).
 
 Phases: **1 is Windows**, 2 is macOS, 3 is NTS Infinite Mixtapes plus Windows
 Media Player skins. Windows comes first, and nothing in phase 1 should make
@@ -43,7 +44,7 @@ renders the frontend in the WebView2 runtime that ships with Windows.
     npm run typecheck     tsc, no emit
     npm run lint          oxlint, warnings fail
     npm run build         Frontend only, into dist/
-    npm run check         typecheck + lint + build, what CI runs
+    npm run check         lint + typecheck + build; CI runs this plus cargo fmt
     npm run tauri build   Release binary and installers (slow, minutes)
 
     cargo fmt --manifest-path src-tauri/Cargo.toml --check
@@ -126,6 +127,9 @@ as the change that makes them stale.
 scaffold default. Once the stream, skin and now-playing hosts are wired in, a
 CSP should allow exactly those origins plus what Webamp needs (`blob:`,
 `data:`, inline styles).
+
+**No supporters link in the app yet.** The README links
+`nts.live/supporters`; the window will once there is UI beyond Webamp.
 
 **Icons are Tauri's defaults.** They need replacing before the installer
 issue, with something that does not borrow the NTS logo.
