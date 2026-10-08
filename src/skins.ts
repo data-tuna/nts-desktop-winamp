@@ -163,6 +163,9 @@ export async function launchSkin(): Promise<{ url: string } | undefined> {
 let latestChange = 0;
 // True while applySkin's own load is in Webamp's hands.
 let applying = false;
+// Loads run one at a time: skinIsLoaded() waits on Webamp's single loading
+// flag, so with two loads in flight it would resolve for the wrong one.
+let loads: Promise<unknown> = Promise.resolve();
 
 /**
  * Puts `next` on Webamp, caching it, and tells the picker. `next` may still
@@ -176,17 +179,25 @@ export async function applySkin(
   const ticket = ++latestChange;
   const skin = await next;
   const bytes = await skinBytes(skin);
-  if (ticket !== latestChange || !stillWanted()) return;
-  const url = blobUrl(bytes);
-  applying = true;
-  webamp.setSkinFromUrl(url);
-  await webamp.skinIsLoaded();
-  applying = false;
-  URL.revokeObjectURL(url);
-  if (ticket !== latestChange) return;
-  remember(skin);
-  writeJson(KEYS.current, skin);
-  void emitTo("picker", "skin-changed", skin);
+  const turn = loads.then(async () => {
+    // Checked on this load's turn: a newer change may have come meanwhile.
+    if (ticket !== latestChange || !stillWanted()) return;
+    const url = blobUrl(bytes);
+    applying = true;
+    try {
+      webamp.setSkinFromUrl(url);
+      await webamp.skinIsLoaded();
+    } finally {
+      applying = false;
+      URL.revokeObjectURL(url);
+    }
+    // Loads land in order, so the one that just landed is what is on screen.
+    remember(skin);
+    writeJson(KEYS.current, skin);
+    void emitTo("picker", "skin-changed", skin);
+  });
+  loads = turn.catch(() => undefined);
+  await turn;
 }
 
 /** After launch: swap in a fresh random skin, unless the user kept one. */
