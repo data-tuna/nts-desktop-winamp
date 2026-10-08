@@ -91,8 +91,8 @@ from `webamp/butterchurn`. It renders classic `.wsz` skins only.
 - **The cache is plain files** in `%LOCALAPPDATA%\com.datatuna.ntswinamp\skins`,
   named by md5, written and read through three Rust commands that only the
   main window may call. Over 200 MB, the oldest downloads go first, kept and
-  favourite skins included; they download again when next used. Skin metadata (name, screenshot, URL) sits in
-  `localStorage`.
+  favourite skins included; they download again when next used. Skin
+  metadata (name, screenshot, URL) sits in `localStorage`.
 - **One Museum query per launch, usually.** The approved count is
   remembered, so a random skin costs one `skins(filter: APPROVED, offset:
   random)` query and one download. The first launch, which has no count
@@ -104,6 +104,19 @@ from `webamp/butterchurn`. It renders classic `.wsz` skins only.
   it costs about 60 MB; closed, nothing.
 - **"Keep this skin"** turns random-on-launch off until it is cleared;
   picking another skin while it is on keeps the new one.
+
+### Channel switching, reconnect and saved settings (ATA-68, 2026-10-08)
+
+Within what ATA-68 asked for, these were the choices:
+
+- Next on NTS 2 and previous on NTS 1 wrap to the other channel rather than
+  stopping. Keys 1 and 2 pick a channel directly.
+- The seek bar is hidden, not disabled: Winamp hides it for streams too, and
+  seeking a live stream would only restart it.
+- A dropped stream retries the same channel with backoff and never moves to
+  the other one. Pause and stop are never undone by a retry.
+- Volume and the equaliser and playlist windows are saved. The channel is
+  not: the app always opens on NTS 1.
 
 ### Random skin on launch, three phases (Ata, 2026-10-08)
 

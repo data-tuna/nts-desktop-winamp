@@ -13,9 +13,12 @@ you listen a lot, support the station directly:
 Status: early. The app opens a frameless Webamp window and starts NTS 1 on
 its own, wearing a random skin from the Skin Museum. To search for a skin,
 keep favourites or keep one skin, open Options > Skins > Skin Browser, or
-press Alt+S. Milkdrop starts closed and opens from Webamp. Switching
-channels and the show titles are still to come. Windows comes first, then
-macOS.
+press Alt+S. Switch channels with next or previous, by double-clicking NTS 1
+or NTS 2 in the playlist, or with the 1 and 2 keys. If the stream drops, it
+reconnects to the same channel by itself. Volume and whether the equaliser
+and playlist are open carry over to the next launch; the channel does not:
+it always starts on NTS 1. Milkdrop starts closed and opens from Webamp. The
+show titles are still to come. Windows comes first, then macOS.
 
 ## Credits
 
