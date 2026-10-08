@@ -120,6 +120,12 @@ main window and the playlist, the gap is see-through but still belongs to the
 app window: clicks there do not reach the desktop. Click-through needs
 platform code and is not done.
 
+**A drag lags the pointer by a few pixels.** The OS drag starts only after
+the pointer has moved 3 px and `startDragging` has returned, and the window
+never makes up that distance, so the point you grabbed ends up a few pixels
+from the cursor. Starting the drag on the press instead would break
+double-click shade. Not fixed yet.
+
 **Fitting the window uses Webamp internals.** `main.ts` listens with
 `webamp.__onStateChange` and moves windows with an `UPDATE_WINDOW_POSITIONS`
 dispatch on `webamp.store`. Neither is public API; check both when upgrading

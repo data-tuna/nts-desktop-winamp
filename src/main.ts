@@ -75,6 +75,8 @@ function followWebampWindows(webamp: Webamp): void {
     }
     if (Math.hypot(event.screenX - press.x, event.screenY - press.y) < DRAG_THRESHOLD_PX) return;
     press = null;
+    // ponytail: the window ignores the pointer's first few pixels, so the grab
+    // point ends up that far from the cursor. Fix in ATA-71 if it bothers.
     void appWindow.startDragging();
   });
   window.addEventListener("mouseup", () => {
@@ -100,13 +102,14 @@ function followWebampWindows(webamp: Webamp): void {
       }
       await appWindow.setSize(new LogicalSize(box.width, box.height));
       lastLayout = `0,0,${box.width},${box.height}`;
+      // A change that landed while we were fitting gets its own pass. Only
+      // after a success: a setSize that keeps failing must not retry every frame.
+      requestAnimationFrame(() => void fit());
     } catch (error: unknown) {
       console.error("Could not fit the window to Webamp", error);
     } finally {
       fitting = false;
     }
-    // A change that landed while we were fitting gets its own pass.
-    requestAnimationFrame(() => void fit());
   };
 
   webamp.__onStateChange(() => requestAnimationFrame(() => void fit()));
