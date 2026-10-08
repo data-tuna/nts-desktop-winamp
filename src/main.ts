@@ -15,6 +15,7 @@ const DRAG_THRESHOLD_PX = 3;
 const SETTINGS_KEY = "player";
 
 // Reconnect backoff: 1 s, 2 s, 4 s, then every 8 s until the stream is back.
+const RETRY_MIN_MS = 1000;
 const RETRY_MAX_MS = 8000;
 // Playing, but the clock has not moved for this long: the stream is stuck.
 const STALL_MS = 10000;
@@ -46,7 +47,7 @@ if (!Webamp.browserIsSupported()) {
     },
     __customMiddlewares: [wrapAtPlaylistEnds],
   });
-  if (saved.volume !== undefined) webamp.setVolume(saved.volume);
+  if (typeof saved.volume === "number") webamp.setVolume(saved.volume);
   reconnectOnDrop(webamp);
   bindChannelKeys(webamp);
   webamp
@@ -109,13 +110,14 @@ function wrapAtPlaylistEnds(store: MiddlewareStore): ReturnType<Middleware> {
   };
 }
 
-/** Keys 1 and 2 jump straight to NTS 1 and NTS 2. */
+/** Keys 1 and 2 jump straight to NTS 1 and NTS 2, wherever they sit in the playlist. */
 function bindChannelKeys(webamp: Webamp): void {
   window.addEventListener("keydown", (event) => {
     if (event.repeat || event.ctrlKey || event.altKey || event.metaKey) return;
-    const index = ["1", "2"].indexOf(event.key);
-    if (index === -1) return;
-    const id = webamp.store.getState().playlist.trackOrder[index];
+    const stream = STREAMS[["1", "2"].indexOf(event.key)];
+    if (!stream) return;
+    const { playlist, tracks } = webamp.store.getState();
+    const id = playlist.trackOrder.find((trackId) => tracks[trackId]?.url === stream.url);
     if (id !== undefined) webamp.store.dispatch({ type: "PLAY_TRACK", id });
   });
 }
@@ -128,7 +130,7 @@ function bindChannelKeys(webamp: Webamp): void {
  * stay manual.
  */
 function reconnectOnDrop(webamp: Webamp): void {
-  let retryMs = 1000;
+  let retryMs = RETRY_MIN_MS;
   let timer: number | undefined;
   let lastElapsed = -1;
   let stalledSince = performance.now();
@@ -136,13 +138,15 @@ function reconnectOnDrop(webamp: Webamp): void {
   const isPlaying = (): boolean => webamp.store.getState().media.status === "PLAYING";
   const reconnect = (): void => {
     if (timer !== undefined || !isPlaying()) return;
+    const id = webamp.store.getState().playlist.currentTrack;
+    if (id == null) return;
     console.warn(`Stream dropped, reconnecting in ${retryMs} ms`);
     timer = window.setTimeout(() => {
       timer = undefined;
       stalledSince = performance.now();
-      const state = webamp.store.getState();
-      if (state.media.status !== "PLAYING" || state.playlist.currentTrack == null) return;
-      webamp.store.dispatch({ type: "PLAY_TRACK", id: state.playlist.currentTrack });
+      // The user may have paused or switched channel meanwhile; leave that alone.
+      if (!isPlaying() || webamp.store.getState().playlist.currentTrack !== id) return;
+      webamp.store.dispatch({ type: "PLAY_TRACK", id });
     }, retryMs);
     retryMs = Math.min(retryMs * 2, RETRY_MAX_MS);
   };
@@ -157,7 +161,7 @@ function reconnectOnDrop(webamp: Webamp): void {
   window.setInterval(() => {
     const elapsed = webamp.media.timeElapsed();
     if (!isPlaying() || elapsed !== lastElapsed) {
-      if (isPlaying() && elapsed > lastElapsed && timer === undefined) retryMs = 1000;
+      if (isPlaying() && elapsed > lastElapsed && timer === undefined) retryMs = RETRY_MIN_MS;
       lastElapsed = elapsed;
       stalledSince = performance.now();
       return;

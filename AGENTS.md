@@ -26,8 +26,9 @@ Written in English.
 
 ## Layout
 
-    src/                  The frontend: Vite + TypeScript. main.ts mounts Webamp
-                          and keeps the OS window fitted to Webamp's windows.
+    src/                  The frontend: Vite + TypeScript. main.ts mounts Webamp,
+                          keeps the OS window fitted to Webamp's windows,
+                          reconnects dropped streams and saves settings.
     src-tauri/            The Rust shell (Tauri 2). Window config in tauri.conf.json,
                           permissions in capabilities/.
     src-tauri/icons/      App icons. Still the Tauri defaults; see Known gaps.
@@ -102,7 +103,9 @@ does not work, because Webamp forces the thumb visible while playing.
 every audio error into "ended", and "ended" dispatches next, so a network drop
 on NTS 1 used to start NTS 2. `main.ts` replaces that listener: a drop, or a
 clock that has not moved for 10 s while playing, reloads the same channel with
-backoff (1, 2, 4, then every 8 s). Pause and stop are left alone. Next on
+backoff (1, 2, 4, then every 8 s). A failed load usually errors at once, so
+those are the gaps; one that just hangs waits out the 10 s first. Pause, stop
+and a channel switch cancel a pending retry. Next on
 NTS 2 and previous on NTS 1 wrap to the other channel instead of stopping.
 
 **ICY titles are empty on these streams.** Webamp does not read ICY metadata
@@ -138,7 +141,7 @@ double-click shade. Not fixed yet.
 `webamp.__onStateChange`, moves windows with an `UPDATE_WINDOW_POSITIONS`
 dispatch on `webamp.store`, replaces the "ended" listeners in
 `webamp.media._emitter`, passes `__customMiddlewares`, and dispatches
-`PLAY_TRACK` / `BUFFER_TRACK` and reads `IS_STOPPED`. None of it is public
+`PLAY_TRACK` / `BUFFER_TRACK` and swallows `IS_STOPPED`. None of it is public
 API; check all of it when upgrading Webamp.
 
 **`tauri dev` needs port 1420 free.** Vite runs with `strictPort`, so a
