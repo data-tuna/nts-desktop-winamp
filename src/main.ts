@@ -1,4 +1,5 @@
 import Webamp from "webamp/butterchurn";
+import type { Middleware, MiddlewareStore } from "webamp";
 import { getCurrentWindow, LogicalSize } from "@tauri-apps/api/window";
 
 // Always start from streams.radiomast.io: it redirects to a regional edge
@@ -11,6 +12,14 @@ const STREAMS = [
 // How far the pointer moves on a title bar before the press becomes a drag.
 const DRAG_THRESHOLD_PX = 3;
 
+const SETTINGS_KEY = "player";
+
+// Reconnect backoff: 1 s, 2 s, 4 s, then every 8 s until the stream is back.
+const RETRY_MIN_MS = 1000;
+const RETRY_MAX_MS = 8000;
+// Playing, but the clock has not moved for this long: the stream is stuck.
+const STALL_MS = 10000;
+
 const container = document.getElementById("app");
 if (!container) {
   throw new Error("#app is missing from index.html");
@@ -19,6 +28,8 @@ if (!container) {
 if (!Webamp.browserIsSupported()) {
   container.textContent = "This WebView cannot run Webamp.";
 } else {
+  const saved = loadSettings();
+  const reconnect = reconnectOnDrop();
   // No initialSkin: Webamp falls back to the base skin bundled with the npm package.
   const webamp = new Webamp({
     initialTracks: STREAMS.map((stream) => ({
@@ -31,15 +42,20 @@ if (!Webamp.browserIsSupported()) {
     // Milkdrop starts closed (Ata, 2026-10-08): open, it costs about 285 MB.
     windowLayout: {
       main: { position: { top: 0, left: 0 } },
-      equalizer: { position: { top: 116, left: 0 } },
-      playlist: { position: { top: 232, left: 0 } },
+      equalizer: { position: { top: 116, left: 0 }, closed: !saved.equalizer },
+      playlist: { position: { top: 232, left: 0 }, closed: !saved.playlist },
       milkdrop: { position: { top: 348, left: 0 }, closed: true },
     },
+    __customMiddlewares: [wrapAtPlaylistEnds, reconnect.middleware],
   });
+  if (typeof saved.volume === "number") webamp.setVolume(saved.volume);
+  reconnect.watch(webamp);
+  bindChannelKeys(webamp);
   webamp
     .renderWhenReady(container)
     .then(() => {
       followWebampWindows(webamp);
+      webamp.__onStateChange(() => saveSettings(webamp));
       // Autoplay with no click relies on WebView2's
       // --autoplay-policy=no-user-gesture-required (tauri.conf.json).
       webamp.play();
@@ -48,6 +64,163 @@ if (!Webamp.browserIsSupported()) {
       console.error("Webamp failed to render", error);
       container.textContent = "Webamp failed to start.";
     });
+}
+
+interface Settings {
+  volume?: number;
+  equalizer: boolean;
+  playlist: boolean;
+}
+
+/** Volume and which windows were open last time. The channel is not saved: launch is always NTS 1. */
+function loadSettings(): Settings {
+  const defaults: Settings = { equalizer: true, playlist: true };
+  try {
+    const parsed: unknown = JSON.parse(localStorage.getItem(SETTINGS_KEY) ?? "{}");
+    return { ...defaults, ...(parsed as Partial<Settings>) };
+  } catch {
+    return defaults;
+  }
+}
+
+function saveSettings(webamp: Webamp): void {
+  const state = webamp.store.getState();
+  const windows = state.windows.genWindows;
+  const settings: Settings = {
+    volume: state.media.volume,
+    equalizer: windows.equalizer.open,
+    playlist: windows.playlist.open,
+  };
+  const json = JSON.stringify(settings);
+  if (json === localStorage.getItem(SETTINGS_KEY)) return;
+  localStorage.setItem(SETTINGS_KEY, json);
+}
+
+/**
+ * With two entries, next on NTS 2 or previous on NTS 1 runs off the end of the
+ * playlist, and Webamp stops. Switch to the other channel instead.
+ * `IS_STOPPED` is only dispatched there.
+ */
+function wrapAtPlaylistEnds(store: MiddlewareStore): ReturnType<Middleware> {
+  return (next) => (action) => {
+    if (action.type !== "IS_STOPPED") return next(action);
+    const { playlist, media } = store.getState();
+    const other = playlist.trackOrder.find((id) => id !== playlist.currentTrack);
+    if (other === undefined) return next(action);
+    return store.dispatch({ type: media.status === "STOPPED" ? "BUFFER_TRACK" : "PLAY_TRACK", id: other });
+  };
+}
+
+/** Keys 1 and 2 jump straight to NTS 1 and NTS 2, wherever they sit in the playlist. */
+function bindChannelKeys(webamp: Webamp): void {
+  window.addEventListener("keydown", (event) => {
+    if (event.repeat || event.ctrlKey || event.altKey || event.metaKey) return;
+    const stream = STREAMS[["1", "2"].indexOf(event.key)];
+    if (!stream) return;
+    const { playlist, tracks } = webamp.store.getState();
+    const id = playlist.trackOrder.find((trackId) => tracks[trackId]?.url === stream.url);
+    if (id !== undefined) webamp.store.dispatch({ type: "PLAY_TRACK", id });
+  });
+}
+
+/**
+ * Webamp treats a media error as the end of the track and moves to the next
+ * one, which silently switched NTS 1 to NTS 2 when the network dropped.
+ * Replace that: a dropped or stuck stream reloads the same channel, with
+ * backoff, for as long as the player is meant to be playing. Pause and stop
+ * stay manual, but Play after a drop reloads the stream instead of resuming
+ * the dead one. Any user action cancels a pending retry and resets the backoff.
+ */
+function reconnectOnDrop(): { middleware: Middleware; watch: (webamp: Webamp) => void } {
+  let retryMs = RETRY_MIN_MS;
+  let timer: number | undefined;
+  // The stream has failed and has not played since.
+  let dropped = false;
+  // Set while our own retry dispatches, so it is not mistaken for the user.
+  let retrying = false;
+  let store: MiddlewareStore | undefined;
+
+  const isPlaying = (): boolean => store?.getState().media.status === "PLAYING";
+  const cancel = (): void => {
+    window.clearTimeout(timer);
+    timer = undefined;
+    retryMs = RETRY_MIN_MS;
+  };
+  const reconnect = (): void => {
+    dropped = true;
+    if (!store || timer !== undefined || !isPlaying()) return;
+    const id = store.getState().playlist.currentTrack;
+    if (id == null) return;
+    console.warn(`Stream dropped, reconnecting in ${retryMs} ms`);
+    timer = window.setTimeout(() => {
+      timer = undefined;
+      if (!store || !isPlaying()) return;
+      retrying = true;
+      try {
+        store.dispatch({ type: "PLAY_TRACK", id });
+      } finally {
+        retrying = false;
+      }
+    }, retryMs);
+    retryMs = Math.min(retryMs * 2, RETRY_MAX_MS);
+  };
+
+  const middleware: Middleware = (middlewareStore) => {
+    store = middlewareStore;
+    return (next) => (action) => {
+      if (retrying) return next(action);
+      switch (action.type) {
+        case "PLAY_TRACK":
+        case "BUFFER_TRACK":
+          // A fresh load: its own failure starts a fresh backoff.
+          cancel();
+          dropped = false;
+          break;
+        case "PAUSE":
+        case "STOP":
+          cancel();
+          break;
+        case "PLAY": {
+          cancel();
+          const result = next(action);
+          const id = middlewareStore.getState().playlist.currentTrack;
+          if (dropped && id != null) middlewareStore.dispatch({ type: "PLAY_TRACK", id });
+          return result;
+        }
+      }
+      return next(action);
+    };
+  };
+
+  const watch = (webamp: Webamp): void => {
+    // Webamp's own "ended" listener dispatches next(). Live streams never end
+    // on purpose, so every "ended" (Webamp also fires it on errors) is a drop.
+    // `_emitter` is not public API; check it when upgrading Webamp.
+    (webamp.media as unknown as { _emitter: { _listeners: Record<string, unknown[]> } })._emitter._listeners.ended = [reconnect];
+
+    // A stream that stops delivering often raises no error at all: the element
+    // just waits. Watch the clock instead.
+    let lastElapsed = -1;
+    let stalledSince = performance.now();
+    window.setInterval(() => {
+      const elapsed = webamp.media.timeElapsed();
+      if (!isPlaying() || elapsed !== lastElapsed) {
+        if (isPlaying() && elapsed > lastElapsed && timer === undefined) {
+          retryMs = RETRY_MIN_MS;
+          dropped = false;
+        }
+        lastElapsed = elapsed;
+        stalledSince = performance.now();
+        return;
+      }
+      if (performance.now() - stalledSince >= STALL_MS) {
+        stalledSince = performance.now();
+        reconnect();
+      }
+    }, 1000);
+  };
+
+  return { middleware, watch };
 }
 
 /**

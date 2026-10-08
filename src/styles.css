@@ -10,3 +10,10 @@ body {
 #app {
   height: 100%;
 }
+
+/* A live stream has no length, so seeking means nothing and would restart
+   the stream. Winamp hides the seek bar for streams; so do we. Not
+   visibility: Webamp forces the thumb visible while playing. */
+#webamp #position {
+  display: none;
+}

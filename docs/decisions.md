@@ -77,6 +77,19 @@ from `webamp/butterchurn`. It renders classic `.wsz` skins only.
 
 ## Product
 
+### Channel switching, reconnect and saved settings (ATA-68, 2026-10-08)
+
+Within what ATA-68 asked for, these were the choices:
+
+- Next on NTS 2 and previous on NTS 1 wrap to the other channel rather than
+  stopping. Keys 1 and 2 pick a channel directly.
+- The seek bar is hidden, not disabled: Winamp hides it for streams too, and
+  seeking a live stream would only restart it.
+- A dropped stream retries the same channel with backoff and never moves to
+  the other one. Pause and stop are never undone by a retry.
+- Volume and the equaliser and playlist windows are saved. The channel is
+  not: the app always opens on NTS 1.
+
 ### Random skin on launch, three phases (Ata, 2026-10-08)
 
 - A random approved Skin Museum skin loads on every launch, with a skin
