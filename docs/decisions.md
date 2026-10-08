@@ -77,6 +77,34 @@ from `webamp/butterchurn`. It renders classic `.wsz` skins only.
 
 ## Product
 
+### Skins: disk cache, random on launch, a separate browser window (ATA-70, 2026-10-08)
+
+- **Startup never waits on the network.** The launch skin comes from the
+  local cache: the kept skin, or a random cached one other than the last.
+  An empty cache means Webamp's base skin. Right after playback starts, one
+  random APPROVED, non-NSFW skin is fetched from the Museum and swapped in;
+  in measured launches, audio started no later because of it (0.42 to
+  0.79 s, against 0.66 s with no skin). Offline, the cached skin stays.
+- **Skins loaded through Webamp itself** (its base skin, Load Skin..., a
+  dropped `.wsz`) are not Museum skins: the app forgets its current skin, and
+  keeping one gives the base skin on the next launch.
+- **The cache is plain files** in `%LOCALAPPDATA%\com.datatuna.ntswinamp\skins`,
+  named by md5, written and read through three Rust commands that only the
+  main window may call. Over 200 MB, the oldest downloads go first, kept and
+  favourite skins included; they download again when next used. Skin
+  metadata (name, screenshot, URL) sits in `localStorage`.
+- **One Museum query per launch, usually.** The approved count is
+  remembered, so a random skin costs one `skins(filter: APPROVED, offset:
+  random)` query and one download. The first launch, which has no count
+  yet, makes two queries, and a draw that lands on the current skin or an
+  NSFW one draws again, at most three times.
+- **The browser is its own window**, opened from Webamp's Options > Skins >
+  "Skin Browser..." or Alt+S, Winamp's shortcut for it. Fitting it into the
+  main window would fight the code that sizes that window to Webamp. Open,
+  it costs about 60 MB; closed, nothing.
+- **"Keep this skin"** turns random-on-launch off until it is cleared;
+  picking another skin while it is on keeps the new one.
+
 ### Channel switching, reconnect and saved settings (ATA-68, 2026-10-08)
 
 Within what ATA-68 asked for, these were the choices:

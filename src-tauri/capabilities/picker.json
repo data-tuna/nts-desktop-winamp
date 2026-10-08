@@ -1,0 +1,13 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "picker",
+  "description": "Capability for the skin picker window: events, and its two footer links",
+  "windows": ["picker"],
+  "permissions": [
+    "core:event:default",
+    {
+      "identifier": "opener:allow-open-url",
+      "allow": [{ "url": "https://skins.webamp.org/" }, { "url": "https://www.nts.live/supporters" }]
+    }
+  ]
+}

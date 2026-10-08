@@ -8,6 +8,12 @@
     "core:window:allow-start-dragging",
     "core:window:allow-set-size",
     "core:window:allow-minimize",
-    "core:window:allow-close"
+    "core:window:allow-close",
+    "core:window:allow-set-focus",
+    "core:window:allow-unminimize",
+    "core:webview:allow-create-webview-window",
+    "allow-cached-skins",
+    "allow-read-skin",
+    "allow-write-skin"
   ]
 }
