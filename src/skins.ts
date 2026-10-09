@@ -281,7 +281,9 @@ export function connectPicker(webamp: Webamp): void {
   });
 
   void listen<Skin>("pick-skin", ({ payload }) => void applySkin(webamp, payload).catch(report));
+  // The tray's Skin menu sends random-skin and open-picker too.
   void listen("random-skin", () => {
     void applySkin(webamp, randomSkin(currentSkin()?.md5)).catch(report);
   });
+  void listen("open-picker", () => void openPicker());
 }
