@@ -75,6 +75,51 @@ from `webamp/butterchurn`. It renders classic `.wsz` skins only.
 [webamp-desktop](https://github.com/durasj/webamp-desktop) is unmaintained
 (last active 2023, webamp 1.x). It is a reference, not a fork base.
 
+## Distribution
+
+### Installers, updates and the name (ATA-72, 2026-10-09)
+
+- **Name: "Unofficial NTS Player"**, proposed to Ata and waiting on an answer
+  before `v0.1.0` is tagged. It is the `productName`, so it names the install
+  folder, the Start menu and desktop shortcuts, the entry in Settings > Apps
+  and the window title. Leading with "Unofficial" makes the shortcut itself
+  say what the app is. "Winamp" stays out of it: that is someone else's
+  trademark too. The executable keeps the name `nts-desktop-winamp.exe`
+  (`mainBinaryName`) so `tools/` and these docs still find the process, and
+  the identifier stays `com.datatuna.ntswinamp` so caches and settings carry
+  over.
+- **NSIS and MSI**, both built from one `tauri build` on a `v*` tag by
+  `.github/workflows/release.yml`. The NSIS installer is the one to
+  download: it installs per user, needs no administrator rights, and is what
+  `latest.json` points the updater at. The MSI costs nothing extra to build,
+  so it ships too. Measured locally for 0.1.0: NSIS 2.17 MiB, MSI 2.82 MiB.
+- **Updates install on launch, without asking.** A release build checks
+  `releases/latest/download/latest.json` once at startup; if it is newer, it
+  downloads, installs in passive mode (a small progress window) and
+  restarts. The stream drops for a few seconds. Offline or with no release,
+  it plays on and tries again next launch. Debug builds never check.
+- **Update signing key** lives in the repository secrets
+  `TAURI_SIGNING_PRIVATE_KEY` and `TAURI_SIGNING_PRIVATE_KEY_PASSWORD`, never
+  in the repo. The public half is in `tauri.conf.json`. If the private key or
+  its password is lost, installed copies can never update again and have to
+  be reinstalled by hand, so keep a copy outside GitHub. Local builds do not
+  need it: `createUpdaterArtifacts` is switched on only by
+  `src-tauri/tauri.release.conf.json`, which the workflow passes.
+- **No code signing yet.** SmartScreen warns on first run and the README
+  says what to click. Options for later:
+  - [Azure Trusted Signing](https://learn.microsoft.com/azure/trusted-signing/):
+    about 10 USD a month, signs from GitHub Actions, and builds SmartScreen
+    reputation. It needs an identity check (an organisation with three years
+    of history, or an individual in the US or Canada at the time of
+    writing), so eligibility needs checking first.
+  - An OV code-signing certificate from a CA: roughly 200 to 400 USD a year,
+    now issued on a hardware token or a cloud HSM, which makes CI signing
+    awkward. Reputation still builds up per certificate over time.
+  - An EV certificate used to skip the warning outright; since 2024 it no
+    longer does, so it is not worth its price here.
+- **Icon:** a pixel-art radio drawn by `tools/make-icon.py`, with nothing
+  from the NTS or Winamp marks.
+
 ## Product
 
 ### Skins: disk cache, random on launch, a separate browser window (ATA-70, 2026-10-08)

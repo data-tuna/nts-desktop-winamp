@@ -34,9 +34,12 @@ Written in English.
     src-tauri/            The Rust shell (Tauri 2). Window config in tauri.conf.json,
                           permissions in capabilities/. lib.rs holds the skin
                           cache commands.
-    src-tauri/icons/      App icons. Still the Tauri defaults; see Known gaps.
+    src-tauri/icons/      App icons, generated: tools/make-icon.py, then
+                          `npx tauri icon`. Drop the android/ and ios/ output.
     docs/decisions.md     Stack choice, research findings, and why.
-    .github/workflows/    CI. Runs on windows-latest.
+    .github/workflows/    ci.yml checks every PR; release.yml builds and
+                          publishes the installers on a v* tag. Both on
+                          windows-latest.
     tools/                Scripts for observing the running app: window
                           screenshots, RAM, and DevTools-protocol probes.
 
@@ -165,6 +168,21 @@ nothing; the picker sends its links through the opener plugin, and
 `capabilities/picker.json` allows exactly those URLs. Add a URL there when
 you add a link.
 
+**The executable is not named after the product.** `productName` is
+"Unofficial NTS Player" (the installer, shortcuts and window title), but
+`mainBinaryName` keeps `nts-desktop-winamp.exe`, which `tools/` and the
+commands here rely on. The installed copy lives in
+`%LOCALAPPDATA%\Unofficial NTS Player`.
+
+**Release builds update themselves on launch.** A release binary whose
+version is older than the latest GitHub release downloads that release's
+installer, runs it (which installs or updates the per-user copy) and quits,
+even when it was started from `src-tauri\target\release`. Keep the version
+in a branch current before measuring a release build. Debug builds
+(`tauri dev`) never check. Updater artifacts are signed only when
+`tauri.release.conf.json` is passed, as the Release workflow does; a plain
+`npm run tauri build` needs no key.
+
 **`tauri dev` needs port 1420 free.** Vite runs with `strictPort`, so a
 leftover dev server makes the next launch fail rather than pick another port.
 
@@ -235,12 +253,12 @@ scaffold default. Once the stream, skin and now-playing hosts are wired in, a
 CSP should allow exactly those origins plus what Webamp needs (`blob:`,
 `data:`, inline styles).
 
-**Icons are Tauri's defaults.** They need replacing before the installer
-issue, with something that does not borrow the NTS logo.
-
 **Webamp still says 192 kbps.** The streams are 256 kbps (`icy-br: 256`);
 the display is Webamp's default, not a measurement.
 
-**CI does not build the Rust side.** It runs typecheck, lint, the frontend
-build and `cargo fmt --check`. A full `tauri build` on `windows-latest` waits
-for the installer issue.
+**PR CI does not build the Rust side.** It runs typecheck, lint, the
+frontend build and `cargo fmt --check`. Only a release tag runs a full
+`tauri build`, so a Rust break can first show up there.
+
+**The installers are not code-signed.** SmartScreen warns on first run; the
+options are in `docs/decisions.md`.
