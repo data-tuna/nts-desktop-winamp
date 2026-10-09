@@ -43,8 +43,7 @@ release; if there is one, it installs it and restarts, which interrupts the
 stream for a few seconds. Updates are signed, and the app refuses one whose
 signature does not match.
 
-Uninstall from Settings > Apps. If you ticked "Start with Windows", untick
-it first: the uninstaller does not remove that entry. Cached skins stay in
+Uninstall from Settings > Apps. Cached skins stay in
 `%LOCALAPPDATA%\com.datatuna.ntswinamp`; delete that folder to remove them.
 
 ## Credits

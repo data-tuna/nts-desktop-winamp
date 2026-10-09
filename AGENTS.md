@@ -39,6 +39,8 @@ Written in English.
                           permissions in capabilities/. lib.rs holds the skin
                           cache commands, the update check, the tray, and
                           the window's position and click-through region.
+    src-tauri/windows/    hooks.nsh: NSIS installer hooks (uninstall removes
+                          the Start with Windows entry).
     src-tauri/icons/      App icons, generated: tools/make-icon.py, then
                           `npx tauri icon`. Drop the android/ and ios/ output.
     docs/decisions.md     Stack choice, research findings, and why.

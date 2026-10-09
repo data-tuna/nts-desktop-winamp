@@ -22,11 +22,12 @@ pub fn run() {
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_autostart::Builder::new().build())
-        // Position only: main.ts sizes the window to Webamp. Restored in
-        // setup rather than by the plugin, so it can be kept on screen.
+        // Size is saved only so the plugin's on-screen check sees the whole
+        // window, not just its top-left pixel; main.ts sets the size, so
+        // setup restores the position alone, then keeps it on screen.
         .plugin(
             tauri_plugin_window_state::Builder::new()
-                .with_state_flags(StateFlags::POSITION)
+                .with_state_flags(StateFlags::POSITION | StateFlags::SIZE)
                 .with_denylist(&["picker"])
                 .skip_initial_state("main")
                 .build(),

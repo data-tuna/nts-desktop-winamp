@@ -151,9 +151,10 @@ from `webamp/butterchurn`. It renders classic `.wsz` skins only.
   channels, wrapping like Webamp's own buttons.
 - **One copy:** `tauri-plugin-single-instance`. A second launch shows,
   unminimizes and focuses the first window, then exits.
-- **Position:** `tauri-plugin-window-state`, position only, since
-  `main.ts` sets the size. It restores a saved position only if it lies on
-  a monitor, otherwise the window opens centred. The app then pulls the
+- **Position:** `tauri-plugin-window-state`. It saves the position and
+  the size, but only the position is restored, since `main.ts` sets the
+  size. The plugin restores a saved position if any corner of the saved
+  window is on a monitor, otherwise the window opens centred. The app then pulls the
   window inside that monitor's work area when part of it is off every
   monitor's work area, at launch and whenever the window is resized to fit
   Webamp (the playlist opens, the show panel appears), so no part of it
@@ -164,6 +165,8 @@ from `webamp/butterchurn`. It renders classic `.wsz` skins only.
 - **Start with Windows:** `tauri-plugin-autostart`, off by default, toggled
   from the tray. It writes `HKCU\...\Run`, so it needs no administrator
   rights. The app starts playing NTS 1 at login, as it does on any launch.
+  Uninstalling removes the entry (`src-tauri/windows/hooks.nsh`); an
+  update, which runs the uninstaller with `/UPDATE`, keeps it.
 - **Clicks on transparent areas go through.** The closest feasible
   behaviour to Winamp's separate windows: the OS window is clipped with
   `SetWindowRgn` to the rectangles of Webamp's windows, its open menus and
