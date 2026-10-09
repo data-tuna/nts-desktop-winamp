@@ -133,6 +133,51 @@ from `webamp/butterchurn`. It renders classic `.wsz` skins only.
 
 ## Product
 
+### Windows behaviour: tray, media keys, one copy, position (ATA-71, 2026-10-09)
+
+- **Tray menu:** Play / Pause, NTS 1, NTS 2, Skin (Random Skin, Skin
+  Browser...), Start with Windows, Quit. A left click brings the player
+  back. The tooltip is the app's name over the title playing now
+  (`NTS 1 - <show> - <location>`, or just `NTS 1` when the live API fails),
+  cut to the 127 characters Windows shows.
+- **Closing the player still quits.** The tray is not a place to hide the
+  window; the issue did not ask for that, and nothing would show the app
+  was still playing.
+- **Media keys go through Windows' media overlay,** the
+  `navigator.mediaSession` setup from ATA-69, not a global hotkey. A global
+  hotkey would take the keys from every other player while this one runs;
+  through the overlay, Windows sends them to whichever player was active
+  last, as it does for browsers and Spotify. Next and previous switch
+  channels, wrapping like Webamp's own buttons.
+- **One copy:** `tauri-plugin-single-instance`. A second launch shows,
+  unminimizes and focuses the first window, then exits.
+- **Position:** `tauri-plugin-window-state`. It saves the position and
+  the size, but only the position is restored, since `main.ts` sets the
+  size. The plugin restores a saved position if any corner of the saved
+  window is on a monitor, otherwise the window opens centred. The app then pulls the
+  window inside that monitor's work area when part of it is off every
+  monitor's work area, at launch and whenever the window is resized to fit
+  Webamp (the playlist opens, the show panel appears), so no part of it
+  sits off screen or under the taskbar. A window that is fully visible,
+  even across two monitors, stays put. A self-update saves the position
+  before the installer closes the app; a crash loses it. While the app
+  runs, Windows itself moves windows off a monitor that is unplugged.
+- **Start with Windows:** `tauri-plugin-autostart`, off by default, toggled
+  from the tray. It writes `HKCU\...\Run`, so it needs no administrator
+  rights. The app starts playing NTS 1 at login, as it does on any launch.
+  Uninstalling removes the entry (`src-tauri/windows/hooks.nsh`); an
+  update, which runs the uninstaller with `/UPDATE`, keeps it.
+- **Clicks on transparent areas go through.** The closest feasible
+  behaviour to Winamp's separate windows: the OS window is clipped with
+  `SetWindowRgn` to the rectangles of Webamp's windows, its open menus and
+  the show panel, so a click in the see-through gap left by a closed
+  equaliser reaches the window behind. The alternative, toggling
+  `setIgnoreCursorEvents` as the pointer crosses a gap, needs the cursor
+  position polled from Rust all the time, since an ignoring window gets no
+  mouse events to tell it the pointer came back. Not covered: a skin's
+  `region.txt` shape (its transparent corners still take clicks), and
+  macOS, where this is phase 2 work.
+
 ### NTS Picks through a hidden SoundCloud widget (Ata, ATA-77, 2026-10-09)
 
 - **SoundCloud, not Mixcloud.** Every pick in the API links to both. nts.live

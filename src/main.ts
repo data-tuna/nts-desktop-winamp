@@ -1,5 +1,7 @@
 import Webamp from "webamp/butterchurn";
 import type { Middleware, MiddlewareStore } from "webamp";
+import { invoke } from "@tauri-apps/api/core";
+import { listen } from "@tauri-apps/api/event";
 import { getCurrentWindow, LogicalSize } from "@tauri-apps/api/window";
 import { showNowPlaying } from "./nowPlaying";
 import { listPicks, playPicksInWidget } from "./picks";
@@ -76,6 +78,7 @@ function start(initialSkin: { url: string } | undefined): void {
       webamp.play();
       showNowPlaying(webamp, STREAMS);
       listPicks(webamp).catch((error: unknown) => console.warn("No NTS Picks this launch", error));
+      connectTray(webamp);
       if (initialSkin) URL.revokeObjectURL(initialSkin.url);
       connectPicker(webamp);
       // Offline, the launch skin from the cache simply stays.
@@ -144,16 +147,50 @@ function wrapAtPlaylistEnds(store: MiddlewareStore): ReturnType<Middleware> {
   };
 }
 
-/** Keys 1 and 2 jump straight to NTS 1 and NTS 2, wherever they sit in the playlist. */
+/** Keys 1 and 2 jump straight to NTS 1 and NTS 2. */
 function bindChannelKeys(webamp: Webamp): void {
   window.addEventListener("keydown", (event) => {
     if (event.repeat || event.ctrlKey || event.altKey || event.metaKey) return;
-    const stream = STREAMS[["1", "2"].indexOf(event.key)];
-    if (!stream) return;
-    const { playlist, tracks } = webamp.store.getState();
-    const id = playlist.trackOrder.find((trackId) => tracks[trackId]?.url === stream.url);
-    if (id !== undefined) webamp.store.dispatch({ type: "PLAY_TRACK", id });
+    const channel = ["1", "2"].indexOf(event.key);
+    if (channel >= 0) playChannel(webamp, channel);
   });
+}
+
+/** Plays NTS 1 (0) or NTS 2 (1), wherever it sits in the playlist. */
+function playChannel(webamp: Webamp, channel: number): void {
+  const { playlist, tracks } = webamp.store.getState();
+  const id = playlist.trackOrder.find((trackId) => tracks[trackId]?.url === STREAMS[channel].url);
+  if (id !== undefined) webamp.store.dispatch({ type: "PLAY_TRACK", id });
+}
+
+/**
+ * Runs the tray menu's player entries (lib.rs sends their ids) and keeps the
+ * tray tooltip on the show playing now.
+ */
+function connectTray(webamp: Webamp): void {
+  void listen<string>("tray", ({ payload }) => {
+    if (payload === "play-pause") {
+      if (webamp.store.getState().media.status === "PLAYING") webamp.pause();
+      else webamp.play();
+    } else if (payload === "nts1" || payload === "nts2") {
+      playChannel(webamp, payload === "nts1" ? 0 : 1);
+    }
+  });
+
+  let tooltip = "";
+  const updateTooltip = (): void => {
+    const { playlist, tracks } = webamp.store.getState();
+    const track = playlist.currentTrack == null ? undefined : tracks[playlist.currentTrack];
+    const next = track?.title ? `Unofficial NTS Player
+${track.title}` : "Unofficial NTS Player";
+    if (next === tooltip) return;
+    tooltip = next;
+    invoke("set_tray_tooltip", { text: next }).catch((error: unknown) =>
+      console.error("Could not set the tray tooltip", error),
+    );
+  };
+  webamp.__onStateChange(updateTooltip);
+  updateTooltip();
 }
 
 /**
@@ -291,7 +328,7 @@ function followWebampWindows(webamp: Webamp): void {
     if (Math.hypot(event.screenX - press.x, event.screenY - press.y) < DRAG_THRESHOLD_PX) return;
     press = null;
     // ponytail: the window ignores the pointer's first few pixels, so the grab
-    // point ends up that far from the cursor. Fix in ATA-71 if it bothers.
+    // point ends up that far from the cursor. Fix if it bothers.
     void appWindow.startDragging();
   });
   window.addEventListener("mouseup", () => {
@@ -318,6 +355,10 @@ function followWebampWindows(webamp: Webamp): void {
         shiftWebampWindows(webamp, -box.left, -box.top);
       }
       await appWindow.setSize(new LogicalSize(box.width, box.height + panelHeight));
+      // A window that grew past the screen edge or the taskbar comes back in.
+      invoke("keep_on_screen").catch((error: unknown) =>
+        console.error("Could not keep the window on screen", error),
+      );
       lastLayout = `0,0,${box.width},${box.height},${panelHeight}`;
       // A change that landed while we were fitting gets its own pass. Only
       // after a success: a setSize that keeps failing must not retry every frame.
@@ -330,6 +371,7 @@ function followWebampWindows(webamp: Webamp): void {
   };
 
   webamp.__onStateChange(() => requestAnimationFrame(() => void fit()));
+  clickThroughGaps(webamp);
   const panel = document.getElementById("now-playing");
   if (panel) new ResizeObserver(() => requestAnimationFrame(() => void fit())).observe(panel);
   void fit();
@@ -369,4 +411,59 @@ function shiftWebampWindows(webamp: Webamp, dx: number, dy: number): void {
     ]),
   );
   webamp.store.dispatch({ type: "UPDATE_WINDOW_POSITIONS", positions: shifted, absolute: true });
+}
+
+/**
+ * The OS window is the box around Webamp's windows, so with the equaliser
+ * closed the gap between the main window and the playlist is see-through
+ * but would still take clicks. Clip the OS window to Webamp's windows, its
+ * menus and the show panel, so clicks in the gaps reach what is behind.
+ */
+function clickThroughGaps(webamp: Webamp): void {
+  let last = "";
+  const clip = (): void => {
+    const scale = window.devicePixelRatio;
+    const rects: [number, number, number, number][] = [];
+    const parts = document.querySelectorAll<HTMLElement>(
+      "#webamp .window, #webamp #main-window, #webamp-context-menu .context-menu, #webamp-context-menu ul, #now-playing",
+    );
+    for (const element of parts) {
+      const rect = element.getBoundingClientRect();
+      if (rect.width === 0 || rect.height === 0) continue;
+      // Round outwards, so the region never cuts a pixel off a window.
+      rects.push([
+        Math.floor(rect.left * scale),
+        Math.floor(rect.top * scale),
+        Math.ceil(rect.right * scale),
+        Math.ceil(rect.bottom * scale),
+      ]);
+    }
+    const key = JSON.stringify(rects);
+    if (rects.length === 0 || key === last) return;
+    last = key;
+    invoke("set_hit_region", { rects }).catch((error: unknown) => {
+      last = "";
+      console.error("Could not clip the window to Webamp", error);
+    });
+  };
+  // Many DOM changes land in one frame; measure once for all of them.
+  let pending = false;
+  const schedule = (): void => {
+    if (pending) return;
+    pending = true;
+    requestAnimationFrame(() => {
+      pending = false;
+      clip();
+    });
+  };
+  webamp.__onStateChange(schedule);
+  // Menus and the show panel come and go without a Webamp state change.
+  new MutationObserver(schedule).observe(document.body, {
+    childList: true,
+    subtree: true,
+    attributes: true,
+    attributeFilter: ["hidden"],
+  });
+  window.addEventListener("resize", schedule);
+  schedule();
 }

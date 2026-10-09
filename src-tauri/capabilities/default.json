@@ -15,6 +15,9 @@
     "allow-cached-skins",
     "allow-read-skin",
     "allow-write-skin",
+    "allow-set-tray-tooltip",
+    "allow-set-hit-region",
+    "allow-keep-on-screen",
     {
       "identifier": "opener:allow-open-url",
       "allow": [{ "url": "https://soundcloud.com/*" }]

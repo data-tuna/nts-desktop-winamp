@@ -26,7 +26,11 @@ channels, the playlist lists the latest NTS Picks with their tags;
 double-click one to play it. Picks stream from NTS's SoundCloud uploads, and
 the panel credits the uploader with a link to the track while one plays.
 The visualiser and equaliser go quiet during a pick, because the audio
-plays inside SoundCloud's player. Windows comes first, then macOS.
+plays inside SoundCloud's player. The keyboard's media keys play, pause
+and switch channels. The tray icon shows the show on air and has a menu to
+play, pause, pick a channel, change the skin, start with Windows (off until
+you tick it) or quit. Starting the app again brings back the one already
+running, and it opens where you left it. Windows comes first, then macOS.
 
 ## Install (Windows)
 

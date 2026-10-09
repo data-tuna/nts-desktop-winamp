@@ -27,8 +27,9 @@ Written in English.
 ## Layout
 
     src/                  The frontend: Vite + TypeScript. main.ts mounts Webamp,
-                          keeps the OS window fitted to Webamp's windows,
-                          reconnects dropped streams and saves settings.
+                          keeps the OS window fitted to Webamp's windows
+                          and clipped to them, reconnects dropped streams,
+                          saves settings and runs the tray's player entries.
                           skins.ts picks, caches and applies Museum skins.
                           picker.ts is the skin browser window (picker.html).
                           live.ts reads the NTS live API; nowPlaying.ts puts
@@ -37,7 +38,10 @@ Written in English.
                           and plays them through a hidden SoundCloud widget.
     src-tauri/            The Rust shell (Tauri 2). Window config in tauri.conf.json,
                           permissions in capabilities/. lib.rs holds the skin
-                          cache commands and the update check.
+                          cache commands, the update check, the tray, and
+                          the window's position and click-through region.
+    src-tauri/windows/    hooks.nsh: NSIS installer hooks (uninstall removes
+                          the Start with Windows entry).
     src-tauri/icons/      App icons, generated: tools/make-icon.py, then
                           `npx tauri icon`. Drop the android/ and ios/ output.
     docs/decisions.md     Stack choice, research findings, and why.
@@ -187,10 +191,25 @@ setting the option drops that, so `tauri.conf.json` repeats it before
 `--autoplay-policy=no-user-gesture-required` and
 `--enable-features=HardwareMediaKeyHandling`. Keep all three when adding flags.
 
-**Transparent gaps catch clicks.** When the equaliser is closed between the
-main window and the playlist, the gap is see-through but still belongs to the
-app window: clicks there do not reach the desktop. Click-through needs
-platform code and is not done.
+**The window is clipped to Webamp.** With the equaliser closed between the
+main window and the playlist, the gap is see-through. `main.ts` sends the
+rectangles of Webamp's windows, its open menus and the show panel to
+`set_hit_region`, which sets them as the window's region (`SetWindowRgn`),
+so clicks in the gap reach whatever is behind. Anything new drawn outside
+those (another panel, a tooltip) is cut off until it is added to the
+selector in `clickThroughGaps`. A skin's `region.txt` shape is not
+followed: its transparent corners still take clicks.
+
+**One copy runs at a time.** A second launch hands over to the first and
+exits, which brings the player back. That includes a release build started
+from `src-tauri\target\release` while the installed copy runs: quit one to
+test the other.
+
+**The window's position is saved on quit,** in
+`%APPDATA%\com.datatuna.ntswinamp\.window-state.json`. A killed process
+saves nothing; a self-update saves first. At launch, and each time
+`main.ts` resizes the window to Webamp, `lib.rs` pulls a window that is
+partly off screen back inside its monitor's work area.
 
 **A drag lags the pointer by a few pixels.** The OS drag starts only after
 the pointer has moved 3 px and `startDragging` has returned, and the window
@@ -202,7 +221,9 @@ double-click shade. Not fixed yet.
 `webamp.__onStateChange`, moves windows with an `UPDATE_WINDOW_POSITIONS`
 dispatch on `webamp.store`, replaces the "ended" listeners in
 `webamp.media._emitter`, passes `__customMiddlewares`, and dispatches
-`PLAY_TRACK` / `BUFFER_TRACK` and swallows `IS_STOPPED`. `nowPlaying.ts`
+`PLAY_TRACK` / `BUFFER_TRACK` and swallows `IS_STOPPED`. `clickThroughGaps`
+measures Webamp's DOM: `#webamp .window`, `#main-window` and the menus under
+`#webamp-context-menu`. `nowPlaying.ts`
 writes titles with `SET_MEDIA_TAGS` and reads `skinPlaylistStyle` for the
 show panel's colours. `picks.ts` replaces methods on `webamp.media` and
 fires its `_emitter` events (`waiting`, `stopWaiting`, `timeupdate`,
@@ -266,7 +287,9 @@ the way a normal one does. `window-shot.ps1` captures only the app's own
 window (transparent areas come out black), never the desktop behind it, but
 after a skin change it can return a stale frame still showing the old skin;
 `cdp-shot.mjs` shows what is actually painted.
-`ram.ps1` sums the app and all of its WebView2 processes.
+`ram.ps1` sums the app and all of its WebView2 processes. The DevTools
+probes talk to the first page in the target list, which is the skin browser
+when that is open; close it first.
 
 To see the now-playing fallback, add
 `--host-resolver-rules="MAP www.nts.live ~NOTFOUND"` to the browser
