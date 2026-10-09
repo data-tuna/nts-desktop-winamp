@@ -2,6 +2,7 @@ import Webamp from "webamp/butterchurn";
 import type { Middleware, MiddlewareStore } from "webamp";
 import { getCurrentWindow, LogicalSize } from "@tauri-apps/api/window";
 import { showNowPlaying } from "./nowPlaying";
+import { listPicks, playPicksInWidget } from "./picks";
 import { connectPicker, launchSkin, PICKER_MENU_ENTRY, swapInRandomSkin } from "./skins";
 
 // Always start from streams.radiomast.io: it redirects to a regional edge
@@ -11,6 +12,7 @@ const STREAMS = [
   { url: "https://streams.radiomast.io/nts1", defaultName: "NTS 1" },
   { url: "https://streams.radiomast.io/nts2", defaultName: "NTS 2" },
 ];
+const isChannel = (url: string | undefined): boolean => STREAMS.some((stream) => stream.url === url);
 
 // How far the pointer moves on a title bar before the press becomes a drag.
 const DRAG_THRESHOLD_PX = 3;
@@ -60,6 +62,7 @@ function start(initialSkin: { url: string } | undefined): void {
     // Windows' media overlay. Its title and artwork come from showNowPlaying.
     enableMediaSession: true,
   });
+  playPicksInWidget(webamp);
   if (typeof saved.volume === "number") webamp.setVolume(saved.volume);
   reconnect.watch(webamp);
   bindChannelKeys(webamp);
@@ -72,6 +75,7 @@ function start(initialSkin: { url: string } | undefined): void {
       // --autoplay-policy=no-user-gesture-required (tauri.conf.json).
       webamp.play();
       showNowPlaying(webamp, STREAMS);
+      listPicks(webamp).catch((error: unknown) => console.warn("No NTS Picks this launch", error));
       if (initialSkin) URL.revokeObjectURL(initialSkin.url);
       connectPicker(webamp);
       // Offline, the launch skin from the cache simply stays.
@@ -116,17 +120,27 @@ function saveSettings(webamp: Webamp): void {
 }
 
 /**
- * With two entries, next on NTS 2 or previous on NTS 1 runs off the end of the
- * playlist, and Webamp stops. Switch to the other channel instead.
- * `IS_STOPPED` is only dispatched there.
+ * Next and previous on a channel switch to the other channel. Previous on
+ * NTS 1 runs off the top of the playlist (`IS_STOPPED`), and next on NTS 2
+ * lands on the separator above the picks. On a pick they move through the
+ * picks, and the separator stands for the first pick (previous on it starts
+ * it over; shuffle can land there too). A double-click on the separator
+ * does the same, since Webamp sends it as the same action.
  */
 function wrapAtPlaylistEnds(store: MiddlewareStore): ReturnType<Middleware> {
   return (next) => (action) => {
-    if (action.type !== "IS_STOPPED") return next(action);
-    const { playlist, media } = store.getState();
-    const other = playlist.trackOrder.find((id) => id !== playlist.currentTrack);
-    if (other === undefined) return next(action);
-    return store.dispatch({ type: media.status === "STOPPED" ? "BUFFER_TRACK" : "PLAY_TRACK", id: other });
+    const { playlist, media, tracks } = store.getState();
+    const toSeparator =
+      (action.type === "PLAY_TRACK" || action.type === "BUFFER_TRACK") && tracks[action.id]?.url === "";
+    if (action.type !== "IS_STOPPED" && !toSeparator) return next(action);
+    const channels = playlist.trackOrder.filter((id) => isChannel(tracks[id]?.url));
+    const other = channels.includes(playlist.currentTrack ?? NaN)
+      ? channels.find((id) => id !== playlist.currentTrack)
+      : undefined;
+    const target = other ?? (toSeparator ? playlist.trackOrder[playlist.trackOrder.indexOf(action.id) + 1] : undefined);
+    if (target === undefined) return toSeparator ? action : next(action);
+    const type = toSeparator ? action.type : media.status === "STOPPED" ? "BUFFER_TRACK" : "PLAY_TRACK";
+    return store.dispatch({ type, id: target });
   };
 }
 
@@ -223,7 +237,9 @@ function reconnectOnDrop(): { middleware: Middleware; watch: (webamp: Webamp) =>
     let stalledSince = performance.now();
     window.setInterval(() => {
       const elapsed = webamp.media.timeElapsed();
-      if (!isPlaying() || elapsed !== lastElapsed) {
+      // A stuck pick is left alone: reloading it would start a two-hour mix over.
+      const { playlist, tracks } = webamp.store.getState();
+      if (!isPlaying() || !isChannel(tracks[playlist.currentTrack ?? NaN]?.url) || elapsed !== lastElapsed) {
         if (isPlaying() && elapsed > lastElapsed && timer === undefined) {
           retryMs = RETRY_MIN_MS;
           dropped = false;

@@ -20,8 +20,13 @@ and playlist are open carry over to the next launch; the channel does not:
 it always starts on NTS 1. Milkdrop starts closed and opens from Webamp. The
 scrolling title, the playlist and Windows' media overlay show what is on air,
 from the NTS website's schedule; a panel under the player adds the show's
-artwork and what comes next, and Alt+3 or its × hides it. Windows comes
-first, then macOS.
+artwork and what comes next, and Alt+3 or its × hides it (not while a pick
+plays: the panel carries its credit). Under the two
+channels, the playlist lists the latest NTS Picks with their tags;
+double-click one to play it. Picks stream from NTS's SoundCloud uploads, and
+the panel credits the uploader with a link to the track while one plays.
+The visualiser and equaliser go quiet during a pick, because the audio
+plays inside SoundCloud's player. Windows comes first, then macOS.
 
 ## Install (Windows)
 
@@ -52,6 +57,8 @@ Uninstall from Settings > Apps. Cached skins stay in
   repository or the installer.
 - [Tauri](https://tauri.app/) is the desktop shell.
 - Streams will come from NTS via `streams.radiomast.io`.
+- NTS Picks play from NTS's uploads on [SoundCloud](https://soundcloud.com/),
+  through SoundCloud's embedded player.
 
 ## Development
 
