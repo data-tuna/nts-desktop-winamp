@@ -41,14 +41,17 @@ export function showNowPlaying(webamp: Webamp, streams: Stream[]): void {
   const [art, now, next, close] = ["img", ".now", ".next", "button"].map((selector) =>
     panel?.querySelector<HTMLElement>(selector),
   );
+  const currentPick = () => {
+    const { playlist, tracks } = webamp.store.getState();
+    return pickOf(playlist.currentTrack == null ? undefined : tracks[playlist.currentTrack]?.url);
+  };
   let rendered = "";
   const renderPanel = (): void => {
     if (!panel || !(art instanceof HTMLImageElement) || !now || !next || !close) return;
     const state = webamp.store.getState();
-    const currentTrack = state.playlist.currentTrack;
-    const channel = channelOf(currentTrack);
+    const channel = channelOf(state.playlist.currentTrack);
     const show = onAir[channel];
-    const pick = pickOf(currentTrack == null ? undefined : state.tracks[currentTrack]?.url);
+    const pick = currentPick();
     const style = state.display.skinPlaylistStyle;
     const key = JSON.stringify([panelOpen, channel, show, pick, style]);
     if (key === rendered) return;
@@ -84,6 +87,8 @@ export function showNowPlaying(webamp: Webamp, streams: Stream[]): void {
     next.textContent = next.title = show?.next ? `Next${at && ` ${at}`}: ${show.next.title}` : "";
   };
   const togglePanel = (): void => {
+    // The panel cannot close during a pick; do not save a choice nobody sees.
+    if (currentPick()) return;
     panelOpen = !panelOpen;
     localStorage.setItem(PANEL_KEY, panelOpen ? "open" : "closed");
     renderPanel();

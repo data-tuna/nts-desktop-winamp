@@ -123,7 +123,8 @@ function saveSettings(webamp: Webamp): void {
  * Next and previous on a channel switch to the other channel. Previous on
  * NTS 1 runs off the top of the playlist (`IS_STOPPED`), and next on NTS 2
  * lands on the separator above the picks. On a pick they move through the
- * picks, and the separator goes nowhere. A double-click on the separator
+ * picks, and the separator stands for the first pick (previous on it starts
+ * it over; shuffle can land there too). A double-click on the separator
  * does the same, since Webamp sends it as the same action.
  */
 function wrapAtPlaylistEnds(store: MiddlewareStore): ReturnType<Middleware> {
@@ -136,8 +137,10 @@ function wrapAtPlaylistEnds(store: MiddlewareStore): ReturnType<Middleware> {
     const other = channels.includes(playlist.currentTrack ?? NaN)
       ? channels.find((id) => id !== playlist.currentTrack)
       : undefined;
-    if (other === undefined) return toSeparator ? action : next(action);
-    return store.dispatch({ type: media.status === "STOPPED" ? "BUFFER_TRACK" : "PLAY_TRACK", id: other });
+    const target = other ?? (toSeparator ? playlist.trackOrder[playlist.trackOrder.indexOf(action.id) + 1] : undefined);
+    if (target === undefined) return toSeparator ? action : next(action);
+    const type = toSeparator ? action.type : media.status === "STOPPED" ? "BUFFER_TRACK" : "PLAY_TRACK";
+    return store.dispatch({ type, id: target });
   };
 }
 

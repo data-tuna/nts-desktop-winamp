@@ -129,12 +129,16 @@ driven by `postMessage` (SoundCloud's widget protocol, without loading their
 `api.js` into a page that can call Tauri commands). Webamp's visualiser,
 equaliser, balance and Milkdrop cannot hear that audio, so they go quiet
 during a pick. The stall watcher in `main.ts` skips picks, because a reload
-would start the mix over.
+would start the mix over; instead a pick that has not started 15 s after
+Play, or that the widget reports an error for, stops, and Play reloads the
+widget. During a pick the widget owns the Windows overlay and the media
+keys, so `picks.ts` follows its `play` and `pause` events into Webamp.
 
 **The separator row has an empty url.** `wrapAtPlaylistEnds` turns a play of
 it into a channel switch when a channel is playing (so next on NTS 2 still
-wraps to NTS 1), and ignores it from a pick. A double-click on it also
-switches channel; Webamp sends both as the same action.
+wraps to NTS 1), and into the first pick when a pick is playing (previous on
+the first pick, or shuffle landing on it). A double-click on it does the
+same; Webamp sends both as the same action.
 
 **Webamp skips to the next track when a stream fails.** Its media layer turns
 every audio error into "ended", and "ended" dispatches next, so a network drop

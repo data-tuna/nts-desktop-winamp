@@ -142,8 +142,11 @@ from `webamp/butterchurn`. It renders classic `.wsz` skins only.
   unrestricted in its entirety", logo included, which rules out the look Ata
   asked for.
 - **Webamp is the only player on screen** (Ata). SoundCloud's widget plays
-  the audio from a 1 px invisible iframe; Webamp's buttons, clock, seek bar,
-  volume and the Windows overlay drive and show it. SoundCloud's API terms
+  the audio from a 1 px invisible iframe; Webamp's buttons, clock, seek bar
+  and volume drive and show it. The Windows overlay and media keys belong
+  to the widget during a pick: they show the app's name with no artwork,
+  and their play and pause reach the widget, which Webamp then follows.
+  SoundCloud's API terms
   require credit to the uploader and to SoundCloud and a link back, so the
   show panel reads "<uploader> on SoundCloud" during a pick, links to the
   track, and cannot be closed then. The terms say nothing about hiding the
@@ -160,6 +163,11 @@ from `webamp/butterchurn`. It renders classic `.wsz` skins only.
   picks as `<name> - <location> (<genres and moods>)`. One request per
   launch, no paging back. Next and previous on a channel still switch
   channels; on a pick they move through the picks, and the last one stops.
+  With repeat on, previous on NTS 1 wraps to the last pick, as Winamp wraps
+  any playlist; accepted, because Webamp sends that and a double-click on
+  the pick as the same action.
+- **A pick that does not start within 15 s,** or that the widget reports an
+  error for (offline, removed, geo-blocked), stops. Play loads it again.
 
 ### Now playing: titles, a show panel, the media overlay (ATA-69, 2026-10-09)
 

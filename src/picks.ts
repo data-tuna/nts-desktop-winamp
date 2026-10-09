@@ -12,6 +12,8 @@ import { decodeEntities } from "./live.ts";
 const PICKS_API = "https://www.nts.live/api/v2/collections/nts-picks?offset=0&limit=12";
 const WIDGET = "https://w.soundcloud.com/player/";
 const WIDGET_ORIGIN = "https://w.soundcloud.com";
+// A pick asked to play that has not started by then is given up on.
+const START_TIMEOUT_MS = 15_000;
 
 /** The playlist row between the channels and the picks. Its empty url is how the app tells it apart. */
 const SEPARATOR = { url: "", metaData: { artist: "", title: "-".repeat(40) }, duration: 0 };
@@ -118,10 +120,35 @@ export function playPicksInWidget(webamp: Webamp): void {
   document.body.append(frame);
 
   // The pick that owns the widget, or null while a stream plays.
-  let current: { pick: Pick; seconds: number; duration: number; autoPlay: boolean } | null = null;
+  let current: { pick: Pick; seconds: number; duration: number; autoPlay: boolean; ready: boolean } | null = null;
   let volume = webamp.store.getState().media.volume;
+  let startTimer: number | undefined;
   const send = (method: string, value?: unknown): void =>
     frame.contentWindow?.postMessage(JSON.stringify({ method, value }), WIDGET_ORIGIN);
+
+  const started = (): void => {
+    window.clearTimeout(startTimer);
+    startTimer = undefined;
+  };
+  // Unreachable, removed or blocked: stop rather than sit on "playing 0:00".
+  // Play then loads the widget again.
+  const giveUp = (reason: unknown): void => {
+    started();
+    if (!current) return;
+    console.warn("SoundCloud widget gave up", current.pick.url, reason);
+    current.ready = false;
+    webamp.store.dispatch({ type: "STOP" });
+  };
+  const load = (): void => {
+    if (!current) return;
+    current.ready = false;
+    frame.src = `${WIDGET}?url=${encodeURIComponent(current.pick.url)}&auto_play=false&visual=false`;
+    expectStart();
+  };
+  const expectStart = (): void => {
+    started();
+    if (current?.autoPlay) startTimer = window.setTimeout(() => giveUp("timeout"), START_TIMEOUT_MS);
+  };
 
   window.addEventListener("message", (event) => {
     if (event.origin !== WIDGET_ORIGIN || event.source !== frame.contentWindow || !current) return;
@@ -134,7 +161,8 @@ export function playPicksInWidget(webamp: Webamp): void {
     const value = message.value as Record<string, unknown> | undefined;
     switch (message.method) {
       case "ready":
-        for (const name of ["playProgress", "play", "finish", "error"]) send("addEventListener", name);
+        current.ready = true;
+        for (const name of ["playProgress", "play", "pause", "finish", "error"]) send("addEventListener", name);
         send("setVolume", volume);
         send("getCurrentSound");
         if (current.autoPlay) send("play");
@@ -152,20 +180,26 @@ export function playPicksInWidget(webamp: Webamp): void {
         emit("timeupdate");
         break;
       case "play":
+        // Also the Windows overlay and media keys, which reach the widget, not Webamp.
+        started();
         emit("stopWaiting");
         emit("playing");
+        break;
+      case "pause":
+        if (webamp.store.getState().media.status === "PLAYING") webamp.store.dispatch({ type: "PAUSE" });
         break;
       case "finish":
         webamp.nextTrack();
         break;
       case "error":
-        console.warn("SoundCloud widget error", current.pick.url, value);
+        giveUp(value);
         break;
     }
   });
 
   const unload = (): void => {
     if (!current) return;
+    started();
     current = null;
     // Removing the src attribute would leave the widget's page running, and playing.
     frame.src = "about:blank";
@@ -182,20 +216,27 @@ export function playPicksInWidget(webamp: Webamp): void {
     }
     // The live stream stops while a pick plays.
     real.stop();
-    current = { pick, seconds: 0, duration: 0, autoPlay };
+    current = { pick, seconds: 0, duration: 0, autoPlay, ready: false };
     document.body.classList.add("pick");
     emit("waiting");
     emit("timeupdate");
-    frame.src = `${WIDGET}?url=${encodeURIComponent(url)}&auto_play=false&visual=false`;
+    load();
   };
   media.play = async () => {
     if (!current) return real.play();
     current.autoPlay = true;
+    if (!current.ready) return load();
     send("play");
+    expectStart();
   };
-  media.pause = () => (current ? send("pause") : real.pause());
+  media.pause = () => {
+    if (!current) return real.pause();
+    started();
+    send("pause");
+  };
   media.stop = () => {
     if (!current) return real.stop();
+    started();
     current.autoPlay = false;
     send("pause");
     send("seekTo", 0);
