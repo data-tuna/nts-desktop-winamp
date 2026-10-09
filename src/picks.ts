@@ -159,6 +159,9 @@ export function playPicksInWidget(webamp: Webamp): void {
     } catch {
       return;
     }
+    // The frame keeps its window across src changes, so the previous pick's
+    // page can still talk after a switch. The new page always sends ready first.
+    if (!current.ready && message.method !== "ready") return;
     const value = message.value as Record<string, unknown> | undefined;
     switch (message.method) {
       case "ready":
