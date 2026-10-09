@@ -148,15 +148,16 @@ one above the picks. `wrapAtPlaylistEnds` turns a play of either into a
 channel switch when a channel is playing (so next on NTS 2 still wraps to
 NTS 1), and otherwise into the track below it (previous on the first mixtape
 or pick starts it over, next on the last mixtape goes to the first pick,
-shuffle can land on one). `main.ts` lists the mixtapes before the picks, one
-request after the other, so the order holds whichever API answers first. A double-click on it does the
-same; Webamp sends both as the same action.
+shuffle can land on one). A double-click on either does the same; Webamp
+sends both as the same action. `main.ts` lists the mixtapes before the
+picks, one request after the other, so the order holds whichever API answers
+first.
 
 **Webamp skips to the next track when a stream fails.** Its media layer turns
 every audio error into "ended", and "ended" dispatches next, so a network drop
 on NTS 1 used to start NTS 2. `main.ts` replaces that listener: a drop, or a
-clock that has not moved for 10 s while playing, reloads the same channel with
-backoff (1, 2, 4, then every 8 s). A failed load usually errors at once, so
+clock that has not moved for 10 s while playing, reloads the same channel or
+mixtape with backoff (1, 2, 4, then every 8 s). A failed load usually errors at once, so
 those are the gaps; one that just hangs waits out the 10 s first. Pause, stop
 and a channel switch cancel a pending retry and reset the backoff, and Play
 after a drop reloads the stream rather than resuming the dead one. Next on

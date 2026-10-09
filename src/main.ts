@@ -76,7 +76,8 @@ function start(initialSkin: { url: string } | undefined): void {
       // --autoplay-policy=no-user-gesture-required (tauri.conf.json).
       webamp.play();
       showNowPlaying(webamp, STREAMS);
-      // One after the other, so the mixtapes always sit above the picks.
+      // One after the other, so the mixtapes always sit above the picks. A
+      // hanging mixtapes API holds the picks back by its 10 s timeout.
       listMixtapes(webamp)
         .catch((error: unknown) => console.warn("No NTS Infinite Mixtapes this launch", error))
         .then(() => listPicks(webamp))
@@ -165,8 +166,8 @@ function bindChannelKeys(webamp: Webamp): void {
 /**
  * Webamp treats a media error as the end of the track and moves to the next
  * one, which silently switched NTS 1 to NTS 2 when the network dropped.
- * Replace that: a dropped or stuck stream reloads the same channel, with
- * backoff, for as long as the player is meant to be playing. Pause and stop
+ * Replace that: a dropped or stuck stream reloads the same channel or
+ * mixtape, with backoff, for as long as the player is meant to be playing. Pause and stop
  * stay manual, but Play after a drop reloads the stream instead of resuming
  * the dead one. Any user action cancels a pending retry and resets the backoff.
  */

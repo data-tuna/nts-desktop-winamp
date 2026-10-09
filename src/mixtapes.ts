@@ -4,7 +4,7 @@
 
 import type Webamp from "webamp/butterchurn";
 // The .ts extension lets `node --test` load this file directly.
-import { decodeEntities } from "./live.ts";
+import { text } from "./live.ts";
 import { SEPARATOR } from "./picks.ts";
 
 // Undocumented, like the live API. Once per launch.
@@ -28,10 +28,6 @@ export function parseMixtapes(body: unknown): Mixtape[] {
     const subtitle = text(mixtape?.subtitle);
     return [{ url, title: subtitle ? `${title} - ${subtitle}` : title }];
   });
-}
-
-function text(value: unknown): string | undefined {
-  return typeof value === "string" && value.trim() ? decodeEntities(value.trim()) : undefined;
 }
 
 /** Fetch the mixtapes and append them, after a separator, to the playlist. A failure leaves them out. */

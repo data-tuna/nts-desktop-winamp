@@ -94,7 +94,8 @@ function asBroadcast(value: unknown): Broadcast | undefined {
   return title ? { ...(value as Omit<Broadcast, "title">), title } : undefined;
 }
 
-function text(value: unknown): string | undefined {
+/** A non-blank string, trimmed and entity-decoded; anything else is undefined. */
+export function text(value: unknown): string | undefined {
   return typeof value === "string" && value.trim() ? decodeEntities(value.trim()) : undefined;
 }
 
