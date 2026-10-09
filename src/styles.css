@@ -13,9 +13,24 @@ body {
 
 /* A live stream has no length, so seeking means nothing and would restart
    the stream. Winamp hides the seek bar for streams; so do we. Not
-   visibility: Webamp forces the thumb visible while playing. */
-#webamp #position {
+   visibility: Webamp forces the thumb visible while playing. A pick
+   (body.pick, set by picks.ts) has a length and seeks. */
+body:not(.pick) #webamp #position {
   display: none;
+}
+
+/* The SoundCloud widget that plays picks. Out of sight, but 1 px inside the
+   window rather than display: none, so WebView2 does not treat it as hidden
+   and throttle it. */
+#pick-widget {
+  position: fixed;
+  left: 0;
+  bottom: 0;
+  width: 1px;
+  height: 1px;
+  border: 0;
+  opacity: 0;
+  pointer-events: none;
 }
 
 /* The show panel: the skin's playlist colours and font, like a Winamp strip. */
@@ -38,7 +53,8 @@ body {
 }
 
 #now-playing[hidden],
-#now-playing img[hidden] {
+#now-playing img[hidden],
+#now-playing button[hidden] {
   display: none;
 }
 
@@ -75,4 +91,8 @@ body {
   font: inherit;
   line-height: 10px;
   cursor: pointer;
+}
+
+#now-playing a {
+  color: inherit;
 }
