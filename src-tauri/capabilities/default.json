@@ -16,6 +16,7 @@
     "allow-read-skin",
     "allow-write-skin",
     "allow-set-tray-tooltip",
-    "allow-set-hit-region"
+    "allow-set-hit-region",
+    "allow-keep-on-screen"
   ]
 }

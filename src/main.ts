@@ -339,6 +339,10 @@ function followWebampWindows(webamp: Webamp): void {
         shiftWebampWindows(webamp, -box.left, -box.top);
       }
       await appWindow.setSize(new LogicalSize(box.width, box.height + panelHeight));
+      // A window that grew past the screen edge or the taskbar comes back in.
+      invoke("keep_on_screen").catch((error: unknown) =>
+        console.error("Could not keep the window on screen", error),
+      );
       lastLayout = `0,0,${box.width},${box.height},${panelHeight}`;
       // A change that landed while we were fitting gets its own pass. Only
       // after a success: a setSize that keeps failing must not retry every frame.
@@ -426,7 +430,16 @@ function clickThroughGaps(webamp: Webamp): void {
       console.error("Could not clip the window to Webamp", error);
     });
   };
-  const schedule = (): void => void requestAnimationFrame(clip);
+  // Many DOM changes land in one frame; measure once for all of them.
+  let pending = false;
+  const schedule = (): void => {
+    if (pending) return;
+    pending = true;
+    requestAnimationFrame(() => {
+      pending = false;
+      clip();
+    });
+  };
   webamp.__onStateChange(schedule);
   // Menus and the show panel come and go without a Webamp state change.
   new MutationObserver(schedule).observe(document.body, {

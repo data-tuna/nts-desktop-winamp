@@ -154,9 +154,13 @@ from `webamp/butterchurn`. It renders classic `.wsz` skins only.
 - **Position:** `tauri-plugin-window-state`, position only, since
   `main.ts` sets the size. It restores a saved position only if it lies on
   a monitor, otherwise the window opens centred. The app then pulls the
-  window fully inside that monitor's work area, at launch and whenever the
-  window grows (the playlist opens, the show panel appears), so no part of
-  it sits off screen or under the taskbar.
+  window inside that monitor's work area when part of it is off every
+  monitor's work area, at launch and whenever the window is resized to fit
+  Webamp (the playlist opens, the show panel appears), so no part of it
+  sits off screen or under the taskbar. A window that is fully visible,
+  even across two monitors, stays put. A self-update saves the position
+  before the installer closes the app; a crash loses it. While the app
+  runs, Windows itself moves windows off a monitor that is unplugged.
 - **Start with Windows:** `tauri-plugin-autostart`, off by default, toggled
   from the tray. It writes `HKCU\...\Run`, so it needs no administrator
   rights. The app starts playing NTS 1 at login, as it does on any launch.

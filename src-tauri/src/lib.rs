@@ -7,7 +7,7 @@ use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent}
 use tauri::{AppHandle, Emitter, Manager, PhysicalPosition, PhysicalRect, WebviewWindow, Wry};
 use tauri_plugin_autostart::ManagerExt as _;
 use tauri_plugin_updater::UpdaterExt;
-use tauri_plugin_window_state::{StateFlags, WindowExt as _};
+use tauri_plugin_window_state::{AppHandleExt as _, StateFlags, WindowExt as _};
 
 /// Downloaded skins beyond this total are deleted, oldest first.
 const SKIN_CACHE_CAP_BYTES: u64 = 200 * 1024 * 1024;
@@ -34,7 +34,7 @@ pub fn run() {
         .setup(|app| {
             if let Some(main) = app.get_webview_window("main") {
                 main.restore_state(StateFlags::POSITION)?;
-                keep_on_screen(&main.as_ref().window())?;
+                pull_on_screen(&main)?;
             }
             build_tray(app.handle())?;
             // A dev build would otherwise replace itself with the release.
@@ -54,23 +54,13 @@ pub fn run() {
             read_skin,
             write_skin,
             set_tray_tooltip,
-            set_hit_region
+            set_hit_region,
+            keep_on_screen
         ])
+        // Closing the player quits, even with the skin browser still open.
         .on_window_event(|window, event| {
-            if window.label() != "main" {
-                return;
-            }
-            match event {
-                // Closing the player quits, even with the skin browser still open.
-                tauri::WindowEvent::Destroyed => window.app_handle().exit(0),
-                // main.ts sizes the window to Webamp's windows: keep the
-                // grown window on screen too. A minimized one is off screen on purpose.
-                tauri::WindowEvent::Resized(_) if !window.is_minimized().unwrap_or(true) => {
-                    if let Err(error) = keep_on_screen(window) {
-                        eprintln!("could not keep the player on screen: {error}");
-                    }
-                }
-                _ => {}
+            if window.label() == "main" && matches!(event, tauri::WindowEvent::Destroyed) {
+                window.app_handle().exit(0);
             }
         })
         .run(tauri::generate_context!())
@@ -82,6 +72,10 @@ pub fn run() {
 /// the few seconds the install takes.
 async fn update(app: AppHandle) -> tauri_plugin_updater::Result<()> {
     if let Some(update) = app.updater()?.check().await? {
+        // The installer ends the app without the exit that saves it.
+        if let Err(error) = app.save_window_state(StateFlags::POSITION) {
+            eprintln!("could not save the window position: {error}");
+        }
         update.download_and_install(|_, _| {}, || {}).await?;
         app.restart();
     }
@@ -98,20 +92,66 @@ fn show_player(app: &AppHandle) {
 }
 
 /// The window-state plugin restores the saved position only when it is on a
-/// monitor. Pull the rest of the window into that monitor's work area too,
-/// so none of it ends up off screen or under the taskbar after a monitor is
-/// unplugged or rearranged, or when the window grows.
-fn keep_on_screen(window: &tauri::Window) -> tauri::Result<()> {
+/// monitor. If part of the window is still off every monitor's work area
+/// (a monitor was unplugged or rearranged, or the window grew past the
+/// taskbar), pull it into its monitor's work area. A window that is fully
+/// visible, even across two monitors, stays where the user put it.
+fn pull_on_screen(window: &WebviewWindow) -> tauri::Result<()> {
+    let position = window.outer_position()?;
+    let size = window.outer_size()?;
+    let areas: Vec<_> = window
+        .available_monitors()?
+        .iter()
+        .map(|monitor| *monitor.work_area())
+        .collect();
+    if fully_visible(position, (size.width, size.height), &areas) {
+        return Ok(());
+    }
     let Some(monitor) = window.current_monitor()?.or(window.primary_monitor()?) else {
         return Ok(());
     };
-    let position = window.outer_position()?;
-    let size = window.outer_size()?;
-    let fitted = fit_into(position, (size.width, size.height), monitor.work_area());
-    if fitted != position {
-        window.set_position(fitted)?;
-    }
-    Ok(())
+    window.set_position(fit_into(
+        position,
+        (size.width, size.height),
+        monitor.work_area(),
+    ))
+}
+
+/// main.ts calls this after it resizes the window to fit Webamp's windows.
+/// Not on every resize: Windows resizes the window itself when a drag
+/// crosses into a monitor with another scale, and moving it then would
+/// fight the drag.
+#[tauri::command]
+fn keep_on_screen(window: WebviewWindow) -> Result<(), String> {
+    pull_on_screen(&window).map_err(|e| e.to_string())
+}
+
+/// Whether every corner of the window lies in one of `areas`.
+fn fully_visible(
+    position: PhysicalPosition<i32>,
+    (width, height): (u32, u32),
+    areas: &[PhysicalRect<i32, u32>],
+) -> bool {
+    // The last pixel, not the edge one past it.
+    let (right, bottom) = (
+        position.x + width as i32 - 1,
+        position.y + height as i32 - 1,
+    );
+    [
+        (position.x, position.y),
+        (right, position.y),
+        (position.x, bottom),
+        (right, bottom),
+    ]
+    .into_iter()
+    .all(|(x, y)| {
+        areas.iter().any(|area| {
+            x >= area.position.x
+                && x < area.position.x + area.size.width as i32
+                && y >= area.position.y
+                && y < area.position.y + area.size.height as i32
+        })
+    })
 }
 
 /// The nearest position to `position` that puts a window of `size` inside
@@ -206,12 +246,14 @@ fn on_tray_menu(app: &AppHandle, event: MenuEvent) {
 /// back to what the registry holds, in case the write failed.
 fn toggle_autostart(app: &AppHandle) -> Result<(), String> {
     let autolaunch = app.autolaunch();
-    let result = if autolaunch.is_enabled().map_err(|e| e.to_string())? {
-        autolaunch.disable()
-    } else {
-        autolaunch.enable()
-    };
-    let enabled = autolaunch.is_enabled().map_err(|e| e.to_string())?;
+    let result = autolaunch.is_enabled().and_then(|enabled| {
+        if enabled {
+            autolaunch.disable()
+        } else {
+            autolaunch.enable()
+        }
+    });
+    let enabled = autolaunch.is_enabled().unwrap_or(false);
     app.state::<CheckMenuItem<Wry>>()
         .set_checked(enabled)
         .map_err(|e| e.to_string())?;
@@ -254,6 +296,9 @@ fn set_hit_region(window: WebviewWindow, rects: Vec<[i32; 4]>) -> Result<(), Str
         }
         let hwnd = window.hwnd().map_err(|e| e.to_string())?;
         let region = CreateRectRgn(0, 0, 0, 0);
+        if region.is_null() {
+            return Err("CreateRectRgn failed".into());
+        }
         for [left, top, right, bottom] in rects {
             let part = CreateRectRgn(left, top, right, bottom);
             CombineRgn(region, region, part, RGN_OR);
@@ -399,6 +444,25 @@ mod tests {
         assert_eq!(fit(-50, -200), PhysicalPosition::new(0, 0));
         // Only a corner was on screen: a monitor to the right was unplugged.
         assert_eq!(fit(1900, 900), PhysicalPosition::new(1645, 692));
+    }
+
+    #[test]
+    fn fully_visible_allows_spanning_two_monitors_but_not_off_screen() {
+        let left = PhysicalRect {
+            position: PhysicalPosition::new(0, 0),
+            size: tauri::PhysicalSize::new(1920, 1040),
+        };
+        let right = PhysicalRect {
+            position: PhysicalPosition::new(1920, 0),
+            size: tauri::PhysicalSize::new(1920, 1040),
+        };
+        let visible =
+            |x, y, areas: &[_]| fully_visible(PhysicalPosition::new(x, y), (275, 348), areas);
+        assert!(visible(100, 100, &[left]));
+        assert!(visible(1800, 100, &[left, right]));
+        assert!(!visible(1800, 100, &[left]));
+        assert!(!visible(100, 800, &[left, right]));
+        assert!(visible(1645, 692, &[left]));
     }
 
     #[test]

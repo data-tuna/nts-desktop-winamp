@@ -27,8 +27,9 @@ Written in English.
 ## Layout
 
     src/                  The frontend: Vite + TypeScript. main.ts mounts Webamp,
-                          keeps the OS window fitted to Webamp's windows,
-                          reconnects dropped streams and saves settings.
+                          keeps the OS window fitted to Webamp's windows
+                          and clipped to them, reconnects dropped streams,
+                          saves settings and runs the tray's player entries.
                           skins.ts picks, caches and applies Museum skins.
                           picker.ts is the skin browser window (picker.html).
                           live.ts reads the NTS live API; nowPlaying.ts puts
@@ -177,8 +178,9 @@ test the other.
 
 **The window's position is saved on quit,** in
 `%APPDATA%\com.datatuna.ntswinamp\.window-state.json`. A killed process
-saves nothing. At launch, and each time the window grows, `lib.rs` pulls it
-back inside the monitor's work area.
+saves nothing; a self-update saves first. At launch, and each time
+`main.ts` resizes the window to Webamp, `lib.rs` pulls a window that is
+partly off screen back inside its monitor's work area.
 
 **A drag lags the pointer by a few pixels.** The OS drag starts only after
 the pointer has moved 3 px and `startDragging` has returned, and the window
@@ -190,7 +192,9 @@ double-click shade. Not fixed yet.
 `webamp.__onStateChange`, moves windows with an `UPDATE_WINDOW_POSITIONS`
 dispatch on `webamp.store`, replaces the "ended" listeners in
 `webamp.media._emitter`, passes `__customMiddlewares`, and dispatches
-`PLAY_TRACK` / `BUFFER_TRACK` and swallows `IS_STOPPED`. `nowPlaying.ts`
+`PLAY_TRACK` / `BUFFER_TRACK` and swallows `IS_STOPPED`. `clickThroughGaps`
+measures Webamp's DOM: `#webamp .window`, `#main-window` and the menus under
+`#webamp-context-menu`. `nowPlaying.ts`
 writes titles with `SET_MEDIA_TAGS` and reads `skinPlaylistStyle` for the
 show panel's colours. None of it is public API; check all of it when
 upgrading Webamp.

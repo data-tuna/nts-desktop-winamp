@@ -7,6 +7,7 @@ fn main() {
         "write_skin",
         "set_tray_tooltip",
         "set_hit_region",
+        "keep_on_screen",
     ];
     tauri_build::try_build(
         tauri_build::Attributes::new()
