@@ -201,7 +201,8 @@ dispatch on `webamp.store`, replaces the "ended" listeners in
 `PLAY_TRACK` / `BUFFER_TRACK` and swallows `IS_STOPPED`. `nowPlaying.ts`
 writes titles with `SET_MEDIA_TAGS` and reads `skinPlaylistStyle` for the
 show panel's colours. `picks.ts` replaces methods on `webamp.media` and
-fires its `_emitter` events (`timeupdate`, `playing`, `fileLoaded`). None of
+fires its `_emitter` events (`waiting`, `stopWaiting`, `timeupdate`,
+`playing`, `fileLoaded`). None of
 it is public API; check all of it when upgrading Webamp.
 
 **`search_skins` returns rejected, unreviewed and NSFW skins.** Only the
@@ -217,9 +218,10 @@ body. The match is on the label text, so keep the two in step.
 done so yet; if one does, the user sees the dialog and keeps the old skin.
 
 **The WebView opens no new windows.** A `target="_blank"` link does
-nothing; the picker sends its links through the opener plugin, and
-`capabilities/picker.json` allows exactly those URLs. Add a URL there when
-you add a link.
+nothing; the picker and the show panel's SoundCloud credit send their links
+through the opener plugin. `capabilities/picker.json` and, for the main
+window, `capabilities/default.json` (`https://soundcloud.com/*`) allow
+exactly those URLs. Add a URL there when you add a link.
 
 **The executable is not named after the product.** `productName` is
 "Unofficial NTS Player" (the installer, shortcuts and window title), but
@@ -310,7 +312,8 @@ as the change that makes them stale.
 **No content security policy.** `tauri.conf.json` has `"csp": null`, the
 scaffold default. A CSP should allow exactly the stream, skin and
 now-playing hosts (`www.nts.live`, and the `media*.ntslive.co.uk` artwork
-hosts) plus what Webamp needs (`blob:`, `data:`, inline styles).
+hosts), `w.soundcloud.com` as a frame source for picks, plus what Webamp
+needs (`blob:`, `data:`, inline styles).
 
 **Webamp still says 192 kbps.** The streams are 256 kbps (`icy-br: 256`);
 the display is Webamp's default, not a measurement.

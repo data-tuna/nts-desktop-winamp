@@ -12,6 +12,7 @@ const STREAMS = [
   { url: "https://streams.radiomast.io/nts1", defaultName: "NTS 1" },
   { url: "https://streams.radiomast.io/nts2", defaultName: "NTS 2" },
 ];
+const isChannel = (url: string | undefined): boolean => STREAMS.some((stream) => stream.url === url);
 
 // How far the pointer moves on a title bar before the press becomes a drag.
 const DRAG_THRESHOLD_PX = 3;
@@ -122,9 +123,8 @@ function saveSettings(webamp: Webamp): void {
  * Next and previous on a channel switch to the other channel. Previous on
  * NTS 1 runs off the top of the playlist (`IS_STOPPED`), and next on NTS 2
  * lands on the separator above the picks. On a pick they move through the
- * picks, and the separator goes nowhere.
- * ponytail: a double-click on the separator also switches channel; Webamp
- * sends it as the same action.
+ * picks, and the separator goes nowhere. A double-click on the separator
+ * does the same, since Webamp sends it as the same action.
  */
 function wrapAtPlaylistEnds(store: MiddlewareStore): ReturnType<Middleware> {
   return (next) => (action) => {
@@ -132,7 +132,7 @@ function wrapAtPlaylistEnds(store: MiddlewareStore): ReturnType<Middleware> {
     const toSeparator =
       (action.type === "PLAY_TRACK" || action.type === "BUFFER_TRACK") && tracks[action.id]?.url === "";
     if (action.type !== "IS_STOPPED" && !toSeparator) return next(action);
-    const channels = playlist.trackOrder.filter((id) => STREAMS.some((stream) => stream.url === tracks[id]?.url));
+    const channels = playlist.trackOrder.filter((id) => isChannel(tracks[id]?.url));
     const other = channels.includes(playlist.currentTrack ?? NaN)
       ? channels.find((id) => id !== playlist.currentTrack)
       : undefined;
@@ -236,8 +236,7 @@ function reconnectOnDrop(): { middleware: Middleware; watch: (webamp: Webamp) =>
       const elapsed = webamp.media.timeElapsed();
       // A stuck pick is left alone: reloading it would start a two-hour mix over.
       const { playlist, tracks } = webamp.store.getState();
-      const onStream = STREAMS.some((stream) => stream.url === tracks[playlist.currentTrack ?? NaN]?.url);
-      if (!isPlaying() || !onStream || elapsed !== lastElapsed) {
+      if (!isPlaying() || !isChannel(tracks[playlist.currentTrack ?? NaN]?.url) || elapsed !== lastElapsed) {
         if (isPlaying() && elapsed > lastElapsed && timer === undefined) {
           retryMs = RETRY_MIN_MS;
           dropped = false;

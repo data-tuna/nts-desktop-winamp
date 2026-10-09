@@ -14,7 +14,7 @@ const WIDGET = "https://w.soundcloud.com/player/";
 const WIDGET_ORIGIN = "https://w.soundcloud.com";
 
 /** The playlist row between the channels and the picks. Its empty url is how the app tells it apart. */
-export const SEPARATOR = { url: "", metaData: { artist: "", title: "-".repeat(40) }, duration: 0 };
+const SEPARATOR = { url: "", metaData: { artist: "", title: "-".repeat(40) }, duration: 0 };
 
 export type Pick = {
   /** The SoundCloud track page, query string dropped. It is also the pick's Webamp track url. */
