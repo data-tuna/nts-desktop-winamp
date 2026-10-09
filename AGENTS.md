@@ -31,14 +31,19 @@ Written in English.
                           reconnects dropped streams and saves settings.
                           skins.ts picks, caches and applies Museum skins.
                           picker.ts is the skin browser window (picker.html).
+                          live.ts reads the NTS live API; nowPlaying.ts puts
+                          the show in the titles, the show panel and
+                          Windows' media overlay.
     src-tauri/            The Rust shell (Tauri 2). Window config in tauri.conf.json,
                           permissions in capabilities/. lib.rs holds the skin
                           cache commands.
     src-tauri/icons/      App icons. Still the Tauri defaults; see Known gaps.
     docs/decisions.md     Stack choice, research findings, and why.
+    tests/                `node --test` tests and their fixtures.
     .github/workflows/    CI. Runs on windows-latest.
     tools/                Scripts for observing the running app: window
-                          screenshots, RAM, and DevTools-protocol probes.
+                          screenshots, RAM, DevTools-protocol probes, and
+                          what Windows' media overlay shows.
 
 The player is [Webamp](https://github.com/captbaritone/webamp) (npm `webamp`
 2.x), imported as `webamp/butterchurn` so the Milkdrop window works. Tauri
@@ -58,7 +63,8 @@ never move relative to each other and double-clicks still reach Webamp.
     npm run typecheck     tsc, no emit
     npm run lint          oxlint, warnings fail
     npm run build         Frontend only, into dist/
-    npm run check         lint + typecheck + build; CI runs this plus cargo fmt
+    npm test              node --test on tests/ (Node 22.18+ runs the .ts imports)
+    npm run check         lint + typecheck + build + test; CI runs this plus cargo fmt
     npm run tauri build   Release binary and installers (slow, minutes)
 
     cargo fmt --manifest-path src-tauri/Cargo.toml --check
@@ -115,6 +121,24 @@ NTS 2 and previous on NTS 1 wrap to the other channel instead of stopping.
 **ICY titles are empty on these streams.** Webamp does not read ICY metadata
 anyway. The track title comes from the NTS live API or the fallback.
 
+**The NTS live API is cached for 15 minutes.** It answers with
+`Cache-Control: max-age=900` and CloudFront honours it, so a bare request
+can return the show that ended a quarter of an hour ago. `live.ts` adds a
+query string that changes once a minute: a fresh answer, while every client
+in the same minute still shares one cache entry. `broadcast_title` arrives
+HTML-escaped (`&amp;`).
+
+**Titles use ` - `, not ` — `.** Webamp draws the scrolling title from the
+skin's bitmap font, which has a hyphen but no em dash; an em dash comes out
+as a blank cell.
+
+**Windows' media overlay needs `HardwareMediaKeyHandling`.** WebView2 keeps
+`navigator.mediaSession` to itself unless that Chromium feature is on, so
+`tauri.conf.json` enables it. The overlay then lists the app as
+`msedgewebview2.exe`, not by its own name. Webamp's `enableMediaSession`
+sets the metadata only when the track changes; `nowPlaying.ts` sets it again
+after every API answer.
+
 **Webamp with Butterchurn is ~2.0 MB minified.** `vite.config.ts` sets the
 chunk warning limit to 2100 kB for that reason: about 1.1 MB of it is
 Butterchurn and its presets. Do not raise it further to hide a real
@@ -128,7 +152,8 @@ a later Webamp release fixes it.
 **`additionalBrowserArgs` replaces Tauri's WebView2 defaults.** Tauri
 normally passes `--disable-features=msWebOOUI,msPdfOOUI,msSmartScreenProtection`;
 setting the option drops that, so `tauri.conf.json` repeats it before
-`--autoplay-policy=no-user-gesture-required`. Keep both when adding flags.
+`--autoplay-policy=no-user-gesture-required` and
+`--enable-features=HardwareMediaKeyHandling`. Keep all three when adding flags.
 
 **Transparent gaps catch clicks.** When the equaliser is closed between the
 main window and the playlist, the gap is see-through but still belongs to the
@@ -145,8 +170,10 @@ double-click shade. Not fixed yet.
 `webamp.__onStateChange`, moves windows with an `UPDATE_WINDOW_POSITIONS`
 dispatch on `webamp.store`, replaces the "ended" listeners in
 `webamp.media._emitter`, passes `__customMiddlewares`, and dispatches
-`PLAY_TRACK` / `BUFFER_TRACK` and swallows `IS_STOPPED`. None of it is public
-API; check all of it when upgrading Webamp.
+`PLAY_TRACK` / `BUFFER_TRACK` and swallows `IS_STOPPED`. `nowPlaying.ts`
+writes titles with `SET_MEDIA_TAGS` and reads `skinPlaylistStyle` for the
+show panel's colours. None of it is public API; check all of it when
+upgrading Webamp.
 
 **`search_skins` returns rejected, unreviewed and NSFW skins.** Only the
 `skins(filter: APPROVED)` query is pre-filtered. `searchSkins` in `skins.ts`
@@ -182,6 +209,7 @@ port open, then use the probes in `tools/`:
     node tools/cdp-shot.mjs 9333 shot.png [picker]   What the renderer paints
     powershell -File tools/window-shot.ps1 nts-desktop-winamp shot.png
     powershell -File tools/ram.ps1 nts-desktop-winamp
+    powershell -File tools/smtc.ps1             What Windows' media overlay shows
 
 The environment variable carries the autoplay flag too, so a debug run plays
 the way a normal one does. `window-shot.ps1` captures only the app's own
@@ -189,6 +217,11 @@ window (transparent areas come out black), never the desktop behind it, but
 after a skin change it can return a stale frame still showing the old skin;
 `cdp-shot.mjs` shows what is actually painted.
 `ram.ps1` sums the app and all of its WebView2 processes.
+
+To see the now-playing fallback, add
+`--host-resolver-rules="MAP www.nts.live ~NOTFOUND"` to the browser
+arguments: the API fails, the titles read "NTS 1" and "NTS 2", and the
+stream plays as before.
 
 **Two instances share one WebView2 profile.** A second copy of the app (another
 checkout, another agent) joins the first one's browser process, its DevTools

@@ -77,6 +77,27 @@ from `webamp/butterchurn`. It renders classic `.wsz` skins only.
 
 ## Product
 
+### Now playing: titles, a show panel, the media overlay (ATA-69, 2026-10-09)
+
+- **Polling:** the live API is asked at launch, a few seconds after the
+  earlier of the two channels' shows ends, and at least every 2 minutes. If
+  it still reports a show past its end time, it is asked again after 20 s.
+  Each request carries a per-minute query string to get past the CDN's
+  15-minute cache (see AGENTS.md, Gotchas).
+- **Fallback:** a channel the API does not describe, because the request
+  failed or the response changed shape, reads "NTS 1" or "NTS 2". One
+  exception: a show already known keeps its title until its end time, so a
+  single failed request does not blank a title that is still right.
+- **Title format:** `<show> - <location>`, with a hyphen rather than the em
+  dash the issue suggested, because Winamp's bitmap font has no em dash.
+- **The show panel** is a strip under Webamp's windows in the skin's
+  playlist colours and font: artwork, the show, and the next show with its
+  start time. It is open by default; Alt+3 (Winamp's "file info" key) or its
+  × closes it, and that choice is remembered.
+- **Windows' media overlay** shows the show as the title and the channel as
+  the artist, with the artwork, through `navigator.mediaSession` and the
+  `HardwareMediaKeyHandling` WebView2 feature.
+
 ### Skins: disk cache, random on launch, a separate browser window (ATA-70, 2026-10-08)
 
 - **Startup never waits on the network.** The launch skin comes from the
