@@ -87,12 +87,16 @@ from `webamp/butterchurn`. It renders classic `.wsz` skins only.
   trademark too. The executable keeps the name `nts-desktop-winamp.exe`
   (`mainBinaryName`) so `tools/` and these docs still find the process, and
   the identifier stays `com.datatuna.ntswinamp` so caches and settings carry
-  over.
+  over. The name is effectively fixed once `v0.1.0` ships: the per-user
+  install folder and the Settings > Apps entry come from it, so a later
+  rename would leave each existing copy in its old folder and need checking.
 - **NSIS and MSI**, both built from one `tauri build` on a `v*` tag by
   `.github/workflows/release.yml`. The NSIS installer is the one to
   download: it installs per user, needs no administrator rights, and is what
   `latest.json` points the updater at. The MSI costs nothing extra to build,
-  so it ships too. Measured locally for 0.1.0: NSIS 2.17 MiB, MSI 2.82 MiB.
+  so it ships too; `latest.json` also has a `windows-x86_64-msi` entry, which
+  an MSI install looks for first, so it updates through the MSI (not tested
+  end to end). Measured locally for 0.1.0: NSIS 2.17 MiB, MSI 2.82 MiB.
 - **Updates install on launch, without asking.** A release build checks
   `releases/latest/download/latest.json` once at startup; if it is newer, it
   downloads, installs in passive mode (a small progress window) and

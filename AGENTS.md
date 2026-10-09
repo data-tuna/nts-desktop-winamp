@@ -33,7 +33,7 @@ Written in English.
                           picker.ts is the skin browser window (picker.html).
     src-tauri/            The Rust shell (Tauri 2). Window config in tauri.conf.json,
                           permissions in capabilities/. lib.rs holds the skin
-                          cache commands.
+                          cache commands and the update check.
     src-tauri/icons/      App icons, generated: tools/make-icon.py, then
                           `npx tauri icon`. Drop the android/ and ios/ output.
     docs/decisions.md     Stack choice, research findings, and why.
@@ -42,6 +42,8 @@ Written in English.
                           windows-latest.
     tools/                Scripts for observing the running app: window
                           screenshots, RAM, and DevTools-protocol probes.
+                          Also make-icon.py, which draws the icon (needs
+                          Python with Pillow).
 
 The player is [Webamp](https://github.com/captbaritone/webamp) (npm `webamp`
 2.x), imported as `webamp/butterchurn` so the Milkdrop window works. Tauri
