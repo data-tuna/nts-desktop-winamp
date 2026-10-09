@@ -6,6 +6,7 @@ import { connectPicker, launchSkin, PICKER_MENU_ENTRY, swapInRandomSkin } from "
 
 // Always start from streams.radiomast.io: it redirects to a regional edge
 // host with CORS on every hop. See AGENTS.md, Invariants.
+// NTS 1 first: nowPlaying.ts matches these to the live API's channels by index.
 const STREAMS = [
   { url: "https://streams.radiomast.io/nts1", defaultName: "NTS 1" },
   { url: "https://streams.radiomast.io/nts2", defaultName: "NTS 2" },
@@ -290,8 +291,8 @@ function followWebampWindows(webamp: Webamp): void {
     const box = webampBounds();
     if (!box) return;
     // The show panel sits under Webamp's windows, pinned to the OS window's bottom edge.
-    const panel = document.getElementById("now-playing")?.offsetHeight ?? 0;
-    const layout = `${box.left},${box.top},${box.width},${box.height},${panel}`;
+    const panelHeight = document.getElementById("now-playing")?.offsetHeight ?? 0;
+    const layout = `${box.left},${box.top},${box.width},${box.height},${panelHeight}`;
     if (layout === lastLayout || fitting) return;
     fitting = true;
     try {
@@ -300,8 +301,8 @@ function followWebampWindows(webamp: Webamp): void {
       if (box.left !== 0 || box.top !== 0) {
         shiftWebampWindows(webamp, -box.left, -box.top);
       }
-      await appWindow.setSize(new LogicalSize(box.width, box.height + panel));
-      lastLayout = `0,0,${box.width},${box.height},${panel}`;
+      await appWindow.setSize(new LogicalSize(box.width, box.height + panelHeight));
+      lastLayout = `0,0,${box.width},${box.height},${panelHeight}`;
       // A change that landed while we were fitting gets its own pass. Only
       // after a success: a setSize that keeps failing must not retry every frame.
       requestAnimationFrame(() => void fit());

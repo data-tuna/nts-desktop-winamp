@@ -81,7 +81,8 @@ from `webamp/butterchurn`. It renders classic `.wsz` skins only.
 
 - **Polling:** the live API is asked at launch, a few seconds after the
   earlier of the two channels' shows ends, and at least every 2 minutes. If
-  it still reports a show past its end time, it is asked again after 20 s.
+  it still reports a show past its end time, it is asked again a second
+  into the next minute, when the cache-busting query string changes.
   Each request carries a per-minute query string to get past the CDN's
   15-minute cache (see AGENTS.md, Gotchas).
 - **Fallback:** a channel the API does not describe, because the request
@@ -96,7 +97,9 @@ from `webamp/butterchurn`. It renders classic `.wsz` skins only.
   × closes it, and that choice is remembered.
 - **Windows' media overlay** shows the show as the title and the channel as
   the artist, with the artwork, through `navigator.mediaSession` and the
-  `HardwareMediaKeyHandling` WebView2 feature.
+  `HardwareMediaKeyHandling` WebView2 feature. Its play, pause, next and
+  previous buttons drive Webamp; the seek buttons are removed, since seeking
+  a live stream only restarts it.
 
 ### Skins: disk cache, random on launch, a separate browser window (ATA-70, 2026-10-08)
 

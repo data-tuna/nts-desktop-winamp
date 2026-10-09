@@ -4,8 +4,9 @@ import { fetchLive, type OnAir } from "./live";
 // Ask again this often, and a few seconds after the current show ends.
 const POLL_MS = 2 * 60_000;
 const END_GRACE_MS = 5_000;
-// The API still says a show is on after its end time: ask again sooner.
-const STALE_RETRY_MS = 20_000;
+// The API still says a show is on after its end time: ask again just after
+// the next minute starts, when live.ts's cache-busting query string changes.
+const staleRetryMs = (): number => 61_000 - (Date.now() % 60_000);
 
 const PANEL_KEY = "nowPlaying.panel";
 
@@ -53,8 +54,11 @@ export function showNowPlaying(webamp: Webamp, streams: Stream[]): void {
     panel.hidden = !panelOpen || channel < 0;
     const skin = { normal: style?.normal, current: style?.current, background: style?.normalbg, font: style?.font };
     for (const [name, value] of Object.entries(skin)) panel.style.setProperty(`--${name}`, value ?? null);
+    // Quoted, so a family name CSS would not accept bare cannot void the rule.
+    if (skin.font) panel.style.setProperty("--font", JSON.stringify(skin.font));
     art.hidden = !show?.artwork;
-    art.src = show?.artwork ?? "";
+    if (show?.artwork) art.src = show.artwork;
+    else art.removeAttribute("src");
     now.textContent = now.title = channel < 0 ? "" : titleOf(channel);
     const startsAt = show?.next?.startsAt;
     const at = startsAt ? new Date(startsAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "";
@@ -68,7 +72,7 @@ export function showNowPlaying(webamp: Webamp, streams: Stream[]): void {
   panel?.querySelector("button")?.addEventListener("click", togglePanel);
   // Alt+3 is Winamp's "file info" shortcut.
   window.addEventListener("keydown", (event) => {
-    if (event.altKey && event.code === "Digit3") {
+    if (event.altKey && event.code === "Digit3" && !event.repeat) {
       event.preventDefault();
       togglePanel();
     }
@@ -100,18 +104,25 @@ export function showNowPlaying(webamp: Webamp, streams: Stream[]): void {
       const kept = onAir[channel];
       return fresh[channel] ?? (kept?.endsAt !== undefined && kept.endsAt > Date.now() ? kept : undefined);
     });
-    apply();
-
     const ends = onAir.flatMap((show) => (show?.endsAt === undefined ? [] : [show.endsAt - Date.now()]));
     const delay = ends.some((left) => left <= 0)
-      ? STALE_RETRY_MS
+      ? staleRetryMs()
       : Math.min(POLL_MS, ...ends.map((left) => left + END_GRACE_MS));
+    // Scheduled first, so a throw in Webamp's internals cannot end the polling.
     window.setTimeout(() => void poll(), delay);
+    apply();
   };
 
+  // Runs after Webamp's own Media Session listener (registered in its
+  // constructor), so this metadata wins.
   webamp.onTrackDidChange((track) => {
     if (track) updateOverlay();
   });
+  // Seeking a live stream only restarts it; drop Webamp's overlay seek buttons.
+  if ("mediaSession" in navigator) {
+    navigator.mediaSession.setActionHandler("seekbackward", null);
+    navigator.mediaSession.setActionHandler("seekforward", null);
+  }
   webamp.__onStateChange(renderPanel);
   void poll();
 }

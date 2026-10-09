@@ -264,9 +264,9 @@ as the change that makes them stale.
 ## Known gaps
 
 **No content security policy.** `tauri.conf.json` has `"csp": null`, the
-scaffold default. Once the stream, skin and now-playing hosts are wired in, a
-CSP should allow exactly those origins plus what Webamp needs (`blob:`,
-`data:`, inline styles).
+scaffold default. A CSP should allow exactly the stream, skin and
+now-playing hosts (`www.nts.live`, and the `media*.ntslive.co.uk` artwork
+hosts) plus what Webamp needs (`blob:`, `data:`, inline styles).
 
 **Icons are Tauri's defaults.** They need replacing before the installer
 issue, with something that does not borrow the NTS logo.
@@ -275,5 +275,5 @@ issue, with something that does not borrow the NTS logo.
 the display is Webamp's default, not a measurement.
 
 **CI does not build the Rust side.** It runs typecheck, lint, the frontend
-build and `cargo fmt --check`. A full `tauri build` on `windows-latest` waits
+build, the tests and `cargo fmt --check`. A full `tauri build` on `windows-latest` waits
 for the installer issue.
