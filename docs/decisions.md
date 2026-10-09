@@ -98,8 +98,9 @@ from `webamp/butterchurn`. It renders classic `.wsz` skins only.
 - **Windows' media overlay** shows the show as the title and the channel as
   the artist, with the artwork, through `navigator.mediaSession` and the
   `HardwareMediaKeyHandling` WebView2 feature. Its play, pause, next and
-  previous buttons drive Webamp; the seek buttons are removed, since seeking
-  a live stream only restarts it.
+  previous buttons, and the keyboard's media keys, drive Webamp: they play,
+  pause and switch channels. The seek buttons are removed, since seeking a
+  live stream only restarts it.
 
 ### Skins: disk cache, random on launch, a separate browser window (ATA-70, 2026-10-08)
 

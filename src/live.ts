@@ -33,6 +33,35 @@ export async function fetchLive(): Promise<(OnAir | undefined)[]> {
   return parseLive(await response.json());
 }
 
+// Ask again this often, and a few seconds after the current show ends.
+const POLL_MS = 2 * 60_000;
+const END_GRACE_MS = 5_000;
+
+/**
+ * Each channel's latest answer; where the API gave none (a failed request,
+ * a changed shape), a known show keeps its title until it is due to end.
+ */
+export function mergeOnAir(
+  kept: (OnAir | undefined)[],
+  fresh: (OnAir | undefined)[],
+  channels: number,
+  now: number,
+): (OnAir | undefined)[] {
+  return Array.from({ length: channels }, (_, channel) => {
+    const old = kept[channel];
+    return fresh[channel] ?? (old?.endsAt !== undefined && old.endsAt > now ? old : undefined);
+  });
+}
+
+/** Milliseconds until the next request. */
+export function nextPollDelay(onAir: (OnAir | undefined)[], now: number): number {
+  const ends = onAir.flatMap((show) => (show?.endsAt === undefined ? [] : [show.endsAt - now]));
+  // The API still says a show is on after its end time: ask again just after
+  // the next minute starts, when fetchLive's query string changes.
+  if (ends.some((left) => left <= 0)) return 61_000 - (now % 60_000);
+  return Math.min(POLL_MS, ...ends.map((left) => left + END_GRACE_MS));
+}
+
 export function parseLive(body: unknown): (OnAir | undefined)[] {
   const results = (body as { results?: unknown } | null)?.results;
   const list = Array.isArray(results) ? (results as Record<string, unknown>[]) : [];

@@ -1,12 +1,5 @@
 import type Webamp from "webamp/butterchurn";
-import { fetchLive, type OnAir } from "./live";
-
-// Ask again this often, and a few seconds after the current show ends.
-const POLL_MS = 2 * 60_000;
-const END_GRACE_MS = 5_000;
-// The API still says a show is on after its end time: ask again just after
-// the next minute starts, when live.ts's cache-busting query string changes.
-const staleRetryMs = (): number => 61_000 - (Date.now() % 60_000);
+import { fetchLive, mergeOnAir, nextPollDelay, type OnAir } from "./live";
 
 const PANEL_KEY = "nowPlaying.panel";
 
@@ -99,17 +92,10 @@ export function showNowPlaying(webamp: Webamp, streams: Stream[]): void {
     } catch (error: unknown) {
       console.warn("NTS live API failed", error);
     }
-    // A show the API has lost track of keeps its title until it is due to end.
-    onAir = streams.map((_, channel) => {
-      const kept = onAir[channel];
-      return fresh[channel] ?? (kept?.endsAt !== undefined && kept.endsAt > Date.now() ? kept : undefined);
-    });
-    const ends = onAir.flatMap((show) => (show?.endsAt === undefined ? [] : [show.endsAt - Date.now()]));
-    const delay = ends.some((left) => left <= 0)
-      ? staleRetryMs()
-      : Math.min(POLL_MS, ...ends.map((left) => left + END_GRACE_MS));
+    const now = Date.now();
+    onAir = mergeOnAir(onAir, fresh, streams.length, now);
     // Scheduled first, so a throw in Webamp's internals cannot end the polling.
-    window.setTimeout(() => void poll(), delay);
+    window.setTimeout(() => void poll(), nextPollDelay(onAir, now));
     apply();
   };
 
