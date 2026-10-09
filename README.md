@@ -22,7 +22,7 @@ show titles are still to come. Windows comes first, then macOS.
 
 ## Install (Windows)
 
-Download `Unofficial NTS Player_<version>_x64-setup.exe` from the latest
+Download `Unofficial.NTS.Player_<version>_x64-setup.exe` from the latest
 [release](https://github.com/data-tuna/nts-desktop-winamp/releases/latest)
 and run it. It installs for your user only, so it needs no administrator
 rights, and adds a Start menu and a desktop shortcut. An `.msi` sits beside
