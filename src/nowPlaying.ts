@@ -19,7 +19,11 @@ export function showNowPlaying(webamp: Webamp, streams: Stream[]): void {
     const track = id == null ? undefined : webamp.store.getState().tracks[id];
     return streams.findIndex((stream) => stream.url === track?.url);
   };
-  const titleOf = (channel: number): string => onAir[channel]?.title ?? streams[channel].defaultName;
+  // The channel always leads (Ata, 2026-10-09): "NTS 1 - <show> - <location>".
+  const titleOf = (channel: number): string => {
+    const show = onAir[channel]?.title;
+    return show ? `${streams[channel].defaultName} - ${show}` : streams[channel].defaultName;
+  };
 
   const updateOverlay = (): void => {
     const channel = channelOf(webamp.store.getState().playlist.currentTrack);
@@ -27,7 +31,6 @@ export function showNowPlaying(webamp: Webamp, streams: Stream[]): void {
     const artwork = onAir[channel]?.artwork;
     navigator.mediaSession.metadata = new MediaMetadata({
       title: titleOf(channel),
-      artist: streams[channel].defaultName,
       artwork: artwork ? [{ src: artwork, sizes: "200x200" }] : [],
     });
   };
