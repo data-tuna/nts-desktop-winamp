@@ -47,9 +47,9 @@ Written in English.
                           windows-latest.
     tools/                Scripts for observing the running app: window
                           screenshots, RAM, DevTools-protocol probes, and
-                          what Windows' media overlay shows. Also
-                          make-icon.py, which draws the icon (needs Python
-                          with Pillow).
+                          what Windows' media overlay shows.
+                          Also make-icon.py, which draws the icon (needs
+                          Python with Pillow).
 
 The player is [Webamp](https://github.com/captbaritone/webamp) (npm `webamp`
 2.x), imported as `webamp/butterchurn` so the Milkdrop window works. Tauri
