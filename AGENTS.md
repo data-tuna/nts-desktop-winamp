@@ -38,7 +38,7 @@ Written in English.
                           `npx tauri icon`. Drop the android/ and ios/ output.
     docs/decisions.md     Stack choice, research findings, and why.
     .github/workflows/    ci.yml checks every PR; release.yml builds and
-                          publishes the installers on a v* tag. Both on
+                          publishes the installer on a v* tag. Both on
                           windows-latest.
     tools/                Scripts for observing the running app: window
                           screenshots, RAM, and DevTools-protocol probes.
@@ -64,7 +64,7 @@ never move relative to each other and double-clicks still reach Webamp.
     npm run lint          oxlint, warnings fail
     npm run build         Frontend only, into dist/
     npm run check         lint + typecheck + build; CI runs this plus cargo fmt
-    npm run tauri build   Release binary and installers (slow, minutes)
+    npm run tauri build   Release binary and the NSIS installer (slow, minutes)
 
     cargo fmt --manifest-path src-tauri/Cargo.toml --check
 
@@ -262,5 +262,5 @@ the display is Webamp's default, not a measurement.
 frontend build and `cargo fmt --check`. Only a release tag runs a full
 `tauri build`, so a Rust break can first show up there.
 
-**The installers are not code-signed.** SmartScreen warns on first run; the
+**The installer is not code-signed.** SmartScreen warns on first run; the
 options are in `docs/decisions.md`.

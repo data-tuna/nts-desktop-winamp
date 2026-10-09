@@ -1,6 +1,6 @@
 name: Release
 
-# Pushing a tag such as v0.1.0 builds the Windows installers and publishes
+# Pushing a tag such as v0.1.0 builds the Windows installer and publishes
 # them, with the updater's latest.json, as a GitHub Release.
 on:
   push:
@@ -30,19 +30,20 @@ jobs:
           node-version: 22
           cache: npm
 
-      - uses: Swatinem/rust-cache@v2
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
         with:
           workspaces: src-tauri
 
       - run: npm ci
 
-      - uses: tauri-apps/tauri-action@v0
+      # Pinned to a commit, not a tag: this step holds the update signing key.
+      - uses: tauri-apps/tauri-action@84b9d35b5fc46c1e45415bdb6144030364f7ebc5 # v0.6.2
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         with:
-          # Signs the installers for the updater; local builds skip it.
+          # Signs the installer for the updater; local builds skip it.
           args: --config src-tauri/tauri.release.conf.json
           tagName: ${{ github.ref_name }}
           releaseName: Unofficial NTS Player ${{ github.ref_name }}
@@ -52,4 +53,3 @@ jobs:
             An unofficial fan project, not made or endorsed by NTS. Support the station at https://www.nts.live/supporters.
           releaseDraft: false
           prerelease: false
-          updaterJsonPreferNsis: true

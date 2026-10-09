@@ -25,8 +25,7 @@ show titles are still to come. Windows comes first, then macOS.
 Download `Unofficial.NTS.Player_<version>_x64-setup.exe` from the latest
 [release](https://github.com/data-tuna/nts-desktop-winamp/releases/latest)
 and run it. It installs for your user only, so it needs no administrator
-rights, and adds a Start menu and a desktop shortcut. An `.msi` sits beside
-it if you prefer one.
+rights, and adds a Start menu and a desktop shortcut.
 
 **Windows SmartScreen will warn you.** The installer is not code-signed, so
 Windows shows "Windows protected your PC". Click **More info**, then **Run
@@ -98,7 +97,7 @@ behind the stack is in [docs/decisions.md](docs/decisions.md).
    git push origin v0.1.1
    ```
 
-The Release workflow builds the installers on `windows-latest`, signs them
+The Release workflow builds the installer on `windows-latest`, signs it
 for the updater with the `TAURI_SIGNING_PRIVATE_KEY` and
 `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` repository secrets, and publishes a
 GitHub Release with `latest.json`, which installed copies read. It fails if
