@@ -133,6 +133,34 @@ from `webamp/butterchurn`. It renders classic `.wsz` skins only.
 
 ## Product
 
+### NTS Picks through a hidden SoundCloud widget (Ata, ATA-77, 2026-10-09)
+
+- **SoundCloud, not Mixcloud.** Every pick in the API links to both. nts.live
+  plays the SoundCloud copy when there is one, and so does the app. Picks
+  with only a Mixcloud copy are skipped; on 2026-10-09 there were none.
+  Mixcloud's terms (section 4) require its widget to "remain visible and
+  unrestricted in its entirety", logo included, which rules out the look Ata
+  asked for.
+- **Webamp is the only player on screen** (Ata). SoundCloud's widget plays
+  the audio from a 1 px invisible iframe; Webamp's buttons, clock, seek bar,
+  volume and the Windows overlay drive and show it. SoundCloud's API terms
+  require credit to the uploader and to SoundCloud and a link back, so the
+  show panel reads "<uploader> on SoundCloud" during a pick, links to the
+  track, and cannot be closed then. The terms say nothing about hiding the
+  widget.
+- **Not NTS's stream endpoint.** nts.live gets an HLS stream from its own
+  `/api/v2/resolve-stream`, signed with NTS's private token. Using it would
+  borrow NTS's credential, so the app does not. Our own SoundCloud API app
+  would give a stream Webamp could play itself, visualiser included, but it
+  needs Ata to register one and a client secret inside a public app. Not
+  done.
+- **What a pick loses:** the visualiser, equaliser, balance and Milkdrop,
+  since the audio is inside SoundCloud's frame.
+- **The playlist:** NTS 1, NTS 2, a row of dashes (Ata), then the 12 latest
+  picks as `<name> - <location> (<genres and moods>)`. One request per
+  launch, no paging back. Next and previous on a channel still switch
+  channels; on a pick they move through the picks, and the last one stops.
+
 ### Now playing: titles, a show panel, the media overlay (ATA-69, 2026-10-09)
 
 - **Polling:** the live API is asked at launch, a few seconds after the

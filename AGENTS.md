@@ -33,7 +33,8 @@ Written in English.
                           picker.ts is the skin browser window (picker.html).
                           live.ts reads the NTS live API; nowPlaying.ts puts
                           the show in the titles, the show panel and
-                          Windows' media overlay.
+                          Windows' media overlay. picks.ts lists NTS Picks
+                          and plays them through a hidden SoundCloud widget.
     src-tauri/            The Rust shell (Tauri 2). Window config in tauri.conf.json,
                           permissions in capabilities/. lib.rs holds the skin
                           cache commands and the update check.
@@ -94,7 +95,14 @@ always start from `streams.radiomast.io`.
 
 **Playback never depends on the now-playing API.** `https://www.nts.live/api/v2/live`
 is undocumented and can change or vanish. When it fails, the titles fall back
-to "NTS 1" and "NTS 2" and the music keeps playing.
+to "NTS 1" and "NTS 2" and the music keeps playing. The same goes for the
+picks API (`/api/v2/collections/nts-picks`): when it fails, the playlist
+holds just the two channels.
+
+**A playing pick credits its uploader and SoundCloud, with a link back.**
+SoundCloud's API terms ask for that, so the show panel stays open during a
+pick and loses its × (see `docs/decisions.md`). Never play a pick through
+NTS's own `/api/v2/resolve-stream`: it is signed with NTS's private token.
 
 **Skins are fetched at runtime and never committed.** Skin Museum skins are
 third-party fan works with no licence. They come from
@@ -111,7 +119,22 @@ for ideas is fine; copying is not.
 **Webamp reports a live stream's duration as 0.** The time display counts up
 from zero, which is expected for a radio stream. Seeking would restart the
 stream, so `styles.css` hides the seek bar with `display: none`; `visibility`
-does not work, because Webamp forces the thumb visible while playing.
+does not work, because Webamp forces the thumb visible while playing. Picks
+have a length and seek, so the bar shows while `body.pick` is set.
+
+**Picks play inside SoundCloud's frame.** `picks.ts` replaces `loadFromUrl`,
+`play`, `pause`, `stop`, the clock, seek and volume on `webamp.media`; a
+pick's url goes to a 1 px, invisible `w.soundcloud.com/player` iframe,
+driven by `postMessage` (SoundCloud's widget protocol, without loading their
+`api.js` into a page that can call Tauri commands). Webamp's visualiser,
+equaliser, balance and Milkdrop cannot hear that audio, so they go quiet
+during a pick. The stall watcher in `main.ts` skips picks, because a reload
+would start the mix over.
+
+**The separator row has an empty url.** `wrapAtPlaylistEnds` turns a play of
+it into a channel switch when a channel is playing (so next on NTS 2 still
+wraps to NTS 1), and ignores it from a pick. A double-click on it also
+switches channel; Webamp sends both as the same action.
 
 **Webamp skips to the next track when a stream fails.** Its media layer turns
 every audio error into "ended", and "ended" dispatches next, so a network drop
@@ -177,8 +200,9 @@ dispatch on `webamp.store`, replaces the "ended" listeners in
 `webamp.media._emitter`, passes `__customMiddlewares`, and dispatches
 `PLAY_TRACK` / `BUFFER_TRACK` and swallows `IS_STOPPED`. `nowPlaying.ts`
 writes titles with `SET_MEDIA_TAGS` and reads `skinPlaylistStyle` for the
-show panel's colours. None of it is public API; check all of it when
-upgrading Webamp.
+show panel's colours. `picks.ts` replaces methods on `webamp.media` and
+fires its `_emitter` events (`timeupdate`, `playing`, `fileLoaded`). None of
+it is public API; check all of it when upgrading Webamp.
 
 **`search_skins` returns rejected, unreviewed and NSFW skins.** Only the
 `skins(filter: APPROVED)` query is pre-filtered. `searchSkins` in `skins.ts`

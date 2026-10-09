@@ -1,5 +1,7 @@
 import type Webamp from "webamp/butterchurn";
+import { openUrl } from "@tauri-apps/plugin-opener";
 import { fetchLive, mergeOnAir, nextPollDelay, type OnAir } from "./live";
+import { pickOf } from "./picks";
 
 const PANEL_KEY = "nowPlaying.panel";
 
@@ -36,25 +38,46 @@ export function showNowPlaying(webamp: Webamp, streams: Stream[]): void {
   };
 
   const panel = document.getElementById("now-playing");
-  const [art, now, next] = ["img", ".now", ".next"].map((selector) => panel?.querySelector<HTMLElement>(selector));
+  const [art, now, next, close] = ["img", ".now", ".next", "button"].map((selector) =>
+    panel?.querySelector<HTMLElement>(selector),
+  );
   let rendered = "";
   const renderPanel = (): void => {
-    if (!panel || !(art instanceof HTMLImageElement) || !now || !next) return;
+    if (!panel || !(art instanceof HTMLImageElement) || !now || !next || !close) return;
     const state = webamp.store.getState();
-    const channel = channelOf(state.playlist.currentTrack);
+    const currentTrack = state.playlist.currentTrack;
+    const channel = channelOf(currentTrack);
     const show = onAir[channel];
+    const pick = pickOf(currentTrack == null ? undefined : state.tracks[currentTrack]?.url);
     const style = state.display.skinPlaylistStyle;
-    const key = JSON.stringify([panelOpen, channel, show, style]);
+    const key = JSON.stringify([panelOpen, channel, show, pick, style]);
     if (key === rendered) return;
     rendered = key;
-    panel.hidden = !panelOpen || channel < 0;
+    // SoundCloud's terms want the uploader, SoundCloud and a link back on
+    // screen, so a pick keeps the panel open and drops its close button.
+    panel.hidden = pick ? false : !panelOpen || channel < 0;
+    close.hidden = !!pick;
     const skin = { normal: style?.normal, current: style?.current, background: style?.normalbg, font: style?.font };
     for (const [name, value] of Object.entries(skin)) panel.style.setProperty(`--${name}`, value ?? null);
     // Quoted, so a family name CSS would not accept bare cannot void the rule.
     if (skin.font) panel.style.setProperty("--font", JSON.stringify(skin.font));
-    art.hidden = !show?.artwork;
-    if (show?.artwork) art.src = show.artwork;
+    const artwork = pick ? pick.artwork : show?.artwork;
+    art.hidden = !artwork;
+    if (artwork) art.src = artwork;
     else art.removeAttribute("src");
+    if (pick) {
+      now.textContent = now.title = pick.title;
+      const link = document.createElement("a");
+      link.href = pick.url;
+      link.textContent = link.title = `${pick.uploader ?? "Listen"} on SoundCloud`;
+      link.addEventListener("click", (event) => {
+        event.preventDefault();
+        void openUrl(pick.url);
+      });
+      next.title = "";
+      next.replaceChildren(link);
+      return;
+    }
     now.textContent = now.title = channel < 0 ? "" : titleOf(channel);
     const startsAt = show?.next?.startsAt;
     const at = startsAt ? new Date(startsAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "";

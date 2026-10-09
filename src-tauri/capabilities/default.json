@@ -14,6 +14,10 @@
     "core:webview:allow-create-webview-window",
     "allow-cached-skins",
     "allow-read-skin",
-    "allow-write-skin"
+    "allow-write-skin",
+    {
+      "identifier": "opener:allow-open-url",
+      "allow": [{ "url": "https://soundcloud.com/*" }]
+    }
   ]
 }

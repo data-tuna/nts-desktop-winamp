@@ -2,6 +2,7 @@ import Webamp from "webamp/butterchurn";
 import type { Middleware, MiddlewareStore } from "webamp";
 import { getCurrentWindow, LogicalSize } from "@tauri-apps/api/window";
 import { showNowPlaying } from "./nowPlaying";
+import { listPicks, playPicksInWidget } from "./picks";
 import { connectPicker, launchSkin, PICKER_MENU_ENTRY, swapInRandomSkin } from "./skins";
 
 // Always start from streams.radiomast.io: it redirects to a regional edge
@@ -60,6 +61,7 @@ function start(initialSkin: { url: string } | undefined): void {
     // Windows' media overlay. Its title and artwork come from showNowPlaying.
     enableMediaSession: true,
   });
+  playPicksInWidget(webamp);
   if (typeof saved.volume === "number") webamp.setVolume(saved.volume);
   reconnect.watch(webamp);
   bindChannelKeys(webamp);
@@ -72,6 +74,7 @@ function start(initialSkin: { url: string } | undefined): void {
       // --autoplay-policy=no-user-gesture-required (tauri.conf.json).
       webamp.play();
       showNowPlaying(webamp, STREAMS);
+      listPicks(webamp).catch((error: unknown) => console.warn("No NTS Picks this launch", error));
       if (initialSkin) URL.revokeObjectURL(initialSkin.url);
       connectPicker(webamp);
       // Offline, the launch skin from the cache simply stays.
@@ -116,16 +119,24 @@ function saveSettings(webamp: Webamp): void {
 }
 
 /**
- * With two entries, next on NTS 2 or previous on NTS 1 runs off the end of the
- * playlist, and Webamp stops. Switch to the other channel instead.
- * `IS_STOPPED` is only dispatched there.
+ * Next and previous on a channel switch to the other channel. Previous on
+ * NTS 1 runs off the top of the playlist (`IS_STOPPED`), and next on NTS 2
+ * lands on the separator above the picks. On a pick they move through the
+ * picks, and the separator goes nowhere.
+ * ponytail: a double-click on the separator also switches channel; Webamp
+ * sends it as the same action.
  */
 function wrapAtPlaylistEnds(store: MiddlewareStore): ReturnType<Middleware> {
   return (next) => (action) => {
-    if (action.type !== "IS_STOPPED") return next(action);
-    const { playlist, media } = store.getState();
-    const other = playlist.trackOrder.find((id) => id !== playlist.currentTrack);
-    if (other === undefined) return next(action);
+    const { playlist, media, tracks } = store.getState();
+    const toSeparator =
+      (action.type === "PLAY_TRACK" || action.type === "BUFFER_TRACK") && tracks[action.id]?.url === "";
+    if (action.type !== "IS_STOPPED" && !toSeparator) return next(action);
+    const channels = playlist.trackOrder.filter((id) => STREAMS.some((stream) => stream.url === tracks[id]?.url));
+    const other = channels.includes(playlist.currentTrack ?? NaN)
+      ? channels.find((id) => id !== playlist.currentTrack)
+      : undefined;
+    if (other === undefined) return toSeparator ? action : next(action);
     return store.dispatch({ type: media.status === "STOPPED" ? "BUFFER_TRACK" : "PLAY_TRACK", id: other });
   };
 }
@@ -223,7 +234,10 @@ function reconnectOnDrop(): { middleware: Middleware; watch: (webamp: Webamp) =>
     let stalledSince = performance.now();
     window.setInterval(() => {
       const elapsed = webamp.media.timeElapsed();
-      if (!isPlaying() || elapsed !== lastElapsed) {
+      // A stuck pick is left alone: reloading it would start a two-hour mix over.
+      const { playlist, tracks } = webamp.store.getState();
+      const onStream = STREAMS.some((stream) => stream.url === tracks[playlist.currentTrack ?? NaN]?.url);
+      if (!isPlaying() || !onStream || elapsed !== lastElapsed) {
         if (isPlaying() && elapsed > lastElapsed && timer === undefined) {
           retryMs = RETRY_MIN_MS;
           dropped = false;
