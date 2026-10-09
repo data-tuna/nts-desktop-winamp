@@ -120,7 +120,7 @@ export function playPicksInWidget(webamp: Webamp): void {
   document.body.append(frame);
 
   // The pick that owns the widget, or null while a stream plays.
-  let current: { pick: Pick; seconds: number; duration: number; autoPlay: boolean; ready: boolean } | null = null;
+  let current: { pick: Pick; seconds: number; duration: number; autoPlay: boolean; ready: boolean; playing: boolean } | null = null;
   let volume = webamp.store.getState().media.volume;
   let startTimer: number | undefined;
   const send = (method: string, value?: unknown): void =>
@@ -142,6 +142,7 @@ export function playPicksInWidget(webamp: Webamp): void {
   const load = (): void => {
     if (!current) return;
     current.ready = false;
+    current.playing = false;
     frame.src = `${WIDGET}?url=${encodeURIComponent(current.pick.url)}&auto_play=false&visual=false`;
     expectStart();
   };
@@ -182,13 +183,16 @@ export function playPicksInWidget(webamp: Webamp): void {
       case "play":
         // Also the Windows overlay and media keys, which reach the widget, not Webamp.
         started();
+        current.playing = true;
         emit("stopWaiting");
         emit("playing");
         break;
       case "pause":
+        current.playing = false;
         if (webamp.store.getState().media.status === "PLAYING") webamp.store.dispatch({ type: "PAUSE" });
         break;
       case "finish":
+        current.playing = false;
         webamp.nextTrack();
         break;
       case "error":
@@ -216,7 +220,7 @@ export function playPicksInWidget(webamp: Webamp): void {
     }
     // The live stream stops while a pick plays.
     real.stop();
-    current = { pick, seconds: 0, duration: 0, autoPlay, ready: false };
+    current = { pick, seconds: 0, duration: 0, autoPlay, ready: false, playing: false };
     document.body.classList.add("pick");
     emit("waiting");
     emit("timeupdate");
@@ -226,12 +230,15 @@ export function playPicksInWidget(webamp: Webamp): void {
     if (!current) return real.play();
     current.autoPlay = true;
     if (!current.ready) return load();
+    // The widget toggles on "play"; Winamp's Play on a playing track starts it over.
+    if (current.playing) return send("seekTo", 0);
     send("play");
     expectStart();
   };
   media.pause = () => {
     if (!current) return real.pause();
     started();
+    current.autoPlay = false;
     send("pause");
   };
   media.stop = () => {
