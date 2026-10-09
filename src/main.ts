@@ -181,8 +181,8 @@ function connectTray(webamp: Webamp): void {
   const updateTooltip = (): void => {
     const { playlist, tracks } = webamp.store.getState();
     const track = playlist.currentTrack == null ? undefined : tracks[playlist.currentTrack];
-    const next = track?.title ? `Unofficial NTS Player
-${track.title}` : "Unofficial NTS Player";
+    const next = track?.title ? `NTS Radio Bootleg Desktop Player
+${track.title}` : "NTS Radio Bootleg Desktop Player";
     if (next === tooltip) return;
     tooltip = next;
     invoke("set_tray_tooltip", { text: next }).catch((error: unknown) =>

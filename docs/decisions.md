@@ -79,17 +79,23 @@ from `webamp/butterchurn`. It renders classic `.wsz` skins only.
 
 ### Installers, updates and the name (ATA-72, 2026-10-09)
 
-- **Name: "Unofficial NTS Player"**, a working name. Ata had `v0.1.0` ship
-  with it on 2026-10-09 and left the final name open. It is the `productName`, so it names the install
+- **Name: "NTS Radio Bootleg Desktop Player"** (Ata, 2026-10-10), from
+  0.1.1. 0.1.0 shipped with the working name "Unofficial NTS Player". Ata
+  wanted a word with more internet culture than "unofficial"; "Bootleg"
+  still says plainly that NTS did not make it, and the installer metadata
+  and release notes keep the "not made or endorsed by NTS" line. "Cracked"
+  was turned down: on an unsigned installer that SmartScreen already flags,
+  it reads as malware. It is the `productName`, so it names the install
   folder, the Start menu and desktop shortcuts, the entry in Settings > Apps
-  and the window title. Leading with "Unofficial" makes the shortcut itself
-  say what the app is. "Winamp" stays out of it: that is someone else's
+  and the window title. "Winamp" stays out of it: that is someone else's
   trademark too. The executable keeps the name `nts-desktop-winamp.exe`
   (`mainBinaryName`) so `tools/` and these docs still find the process, and
   the identifier stays `com.datatuna.ntswinamp` so caches and settings carry
-  over. The name is effectively fixed once `v0.1.0` ships: the per-user
-  install folder and the Settings > Apps entry come from it, so a later
-  rename would leave each existing copy in its old folder and need checking.
+  over. Tauri's installer keys the install folder, the Settings > Apps entry
+  and the shortcuts on the product name, so the renamed installer would
+  leave a 0.1.0 copy behind as a second app. `src-tauri/windows/hooks.nsh`
+  runs that copy's own uninstaller silently after installing, which keeps
+  settings and skins (they live under the unchanged identifier).
 - **NSIS only, no MSI.** `.github/workflows/release.yml` builds one
   installer on a `v*` tag. It installs per user, needs no administrator
   rights, and is what `latest.json` points the updater at. 2.17 MiB for

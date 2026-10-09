@@ -1,7 +1,7 @@
 {
   "name": "nts-desktop-winamp",
   "private": true,
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Unofficial Winamp-style desktop player for NTS Radio",
   "license": "MIT",
   "type": "module",

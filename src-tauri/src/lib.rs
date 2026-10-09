@@ -205,7 +205,7 @@ fn build_tray(app: &AppHandle) -> tauri::Result<()> {
     )?;
     app.manage(autostart);
     let mut tray = TrayIconBuilder::with_id("main")
-        .tooltip("Unofficial NTS Player")
+        .tooltip("NTS Radio Bootleg Desktop Player")
         .menu(&menu)
         .show_menu_on_left_click(false)
         .on_menu_event(on_tray_menu)

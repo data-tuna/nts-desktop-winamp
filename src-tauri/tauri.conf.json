@@ -1,6 +1,6 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "Unofficial NTS Player",
+  "productName": "NTS Radio Bootleg Desktop Player",
   "mainBinaryName": "nts-desktop-winamp",
   "version": "../package.json",
   "identifier": "com.datatuna.ntswinamp",
@@ -14,7 +14,7 @@
     "windows": [
       {
         "label": "main",
-        "title": "Unofficial NTS Player",
+        "title": "NTS Radio Bootleg Desktop Player",
         "width": 275,
         "height": 348,
         "center": true,
