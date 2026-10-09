@@ -17,3 +17,62 @@ body {
 #webamp #position {
   display: none;
 }
+
+/* The show panel: the skin's playlist colours and font, like a Winamp strip. */
+#now-playing {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 38px;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 2px 3px;
+  border: 1px solid var(--normal, #00ff00);
+  background: var(--background, #000000);
+  color: var(--normal, #00ff00);
+  font: 10px var(--font, Arial), Arial, sans-serif;
+  user-select: none;
+}
+
+#now-playing[hidden],
+#now-playing img[hidden] {
+  display: none;
+}
+
+#now-playing img {
+  width: 32px;
+  height: 32px;
+  flex: none;
+  object-fit: cover;
+}
+
+#now-playing .text {
+  flex: 1;
+  min-width: 0;
+}
+
+#now-playing .now,
+#now-playing .next {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  line-height: 14px;
+}
+
+#now-playing .now {
+  color: var(--current, #ffffff);
+}
+
+#now-playing button {
+  align-self: flex-start;
+  padding: 0 2px;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  line-height: 10px;
+  cursor: pointer;
+}

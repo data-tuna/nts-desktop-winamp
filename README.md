@@ -18,7 +18,10 @@ or NTS 2 in the playlist, or with the 1 and 2 keys. If the stream drops, it
 reconnects to the same channel by itself. Volume and whether the equaliser
 and playlist are open carry over to the next launch; the channel does not:
 it always starts on NTS 1. Milkdrop starts closed and opens from Webamp. The
-show titles are still to come. Windows comes first, then macOS.
+scrolling title, the playlist and Windows' media overlay show what is on air,
+from the NTS website's schedule; a panel under the player adds the show's
+artwork and what comes next, and Alt+3 or its × hides it. Windows comes
+first, then macOS.
 
 ## Install (Windows)
 

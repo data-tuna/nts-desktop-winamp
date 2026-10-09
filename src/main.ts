@@ -1,10 +1,12 @@
 import Webamp from "webamp/butterchurn";
 import type { Middleware, MiddlewareStore } from "webamp";
 import { getCurrentWindow, LogicalSize } from "@tauri-apps/api/window";
+import { showNowPlaying } from "./nowPlaying";
 import { connectPicker, launchSkin, PICKER_MENU_ENTRY, swapInRandomSkin } from "./skins";
 
 // Always start from streams.radiomast.io: it redirects to a regional edge
 // host with CORS on every hop. See AGENTS.md, Invariants.
+// NTS 1 first: nowPlaying.ts matches these to the live API's channels by index.
 const STREAMS = [
   { url: "https://streams.radiomast.io/nts1", defaultName: "NTS 1" },
   { url: "https://streams.radiomast.io/nts2", defaultName: "NTS 2" },
@@ -55,6 +57,8 @@ function start(initialSkin: { url: string } | undefined): void {
       milkdrop: { position: { top: 348, left: 0 }, closed: true },
     },
     __customMiddlewares: [wrapAtPlaylistEnds, reconnect.middleware],
+    // Windows' media overlay. Its title and artwork come from showNowPlaying.
+    enableMediaSession: true,
   });
   if (typeof saved.volume === "number") webamp.setVolume(saved.volume);
   reconnect.watch(webamp);
@@ -67,6 +71,7 @@ function start(initialSkin: { url: string } | undefined): void {
       // Autoplay with no click relies on WebView2's
       // --autoplay-policy=no-user-gesture-required (tauri.conf.json).
       webamp.play();
+      showNowPlaying(webamp, STREAMS);
       if (initialSkin) URL.revokeObjectURL(initialSkin.url);
       connectPicker(webamp);
       // Offline, the launch skin from the cache simply stays.
@@ -285,7 +290,9 @@ function followWebampWindows(webamp: Webamp): void {
   const fit = async (): Promise<void> => {
     const box = webampBounds();
     if (!box) return;
-    const layout = `${box.left},${box.top},${box.width},${box.height}`;
+    // The show panel sits under Webamp's windows, pinned to the OS window's bottom edge.
+    const panelHeight = document.getElementById("now-playing")?.offsetHeight ?? 0;
+    const layout = `${box.left},${box.top},${box.width},${box.height},${panelHeight}`;
     if (layout === lastLayout || fitting) return;
     fitting = true;
     try {
@@ -294,8 +301,8 @@ function followWebampWindows(webamp: Webamp): void {
       if (box.left !== 0 || box.top !== 0) {
         shiftWebampWindows(webamp, -box.left, -box.top);
       }
-      await appWindow.setSize(new LogicalSize(box.width, box.height));
-      lastLayout = `0,0,${box.width},${box.height}`;
+      await appWindow.setSize(new LogicalSize(box.width, box.height + panelHeight));
+      lastLayout = `0,0,${box.width},${box.height},${panelHeight}`;
       // A change that landed while we were fitting gets its own pass. Only
       // after a success: a setSize that keeps failing must not retry every frame.
       requestAnimationFrame(() => void fit());
@@ -307,6 +314,8 @@ function followWebampWindows(webamp: Webamp): void {
   };
 
   webamp.__onStateChange(() => requestAnimationFrame(() => void fit()));
+  const panel = document.getElementById("now-playing");
+  if (panel) new ResizeObserver(() => requestAnimationFrame(() => void fit())).observe(panel);
   void fit();
 }
 
