@@ -79,8 +79,8 @@ from `webamp/butterchurn`. It renders classic `.wsz` skins only.
 
 ### Installers, updates and the name (ATA-72, 2026-10-09)
 
-- **Name: "Unofficial NTS Player"**, proposed to Ata and waiting on an answer
-  before `v0.1.0` is tagged. It is the `productName`, so it names the install
+- **Name: "Unofficial NTS Player"**, a working name. Ata had `v0.1.0` ship
+  with it on 2026-10-09 and left the final name open. It is the `productName`, so it names the install
   folder, the Start menu and desktop shortcuts, the entry in Settings > Apps
   and the window title. Leading with "Unofficial" makes the shortcut itself
   say what the app is. "Winamp" stays out of it: that is someone else's
