@@ -229,7 +229,7 @@ async function openPicker(): Promise<void> {
   }
   new WebviewWindow("picker", {
     url: "picker.html",
-    title: "Skin Browser (nts-desktop-winamp, unofficial)",
+    title: "Skin Browser (Unofficial NTS Player)",
     width: 720,
     height: 560,
     minWidth: 420,
