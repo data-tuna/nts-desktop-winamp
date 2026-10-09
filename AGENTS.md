@@ -249,10 +249,12 @@ window, `capabilities/default.json` (`https://soundcloud.com/*`) allow
 exactly those URLs. Add a URL there when you add a link.
 
 **The executable is not named after the product.** `productName` is
-"Unofficial NTS Player" (the installer, shortcuts and window title), but
+"NTS Radio Bootleg Desktop Player" (the installer, shortcuts and window title), but
 `mainBinaryName` keeps `nts-desktop-winamp.exe`, which `tools/` and the
 commands here rely on. The installed copy lives in
-`%LOCALAPPDATA%\Unofficial NTS Player`.
+`%LOCALAPPDATA%\NTS Radio Bootleg Desktop Player`. Renaming the product
+moves that folder and the Settings > Apps entry, so a rename needs a step in
+`src-tauri/windows/hooks.nsh` that removes the old-name copy, as 0.1.1 did.
 
 **Release builds update themselves on launch.** A release binary whose
 version is older than the latest GitHub release downloads that release's

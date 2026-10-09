@@ -34,7 +34,7 @@ running, and it opens where you left it. Windows comes first, then macOS.
 
 ## Install (Windows)
 
-Download `Unofficial.NTS.Player_<version>_x64-setup.exe` from the latest
+Download `NTS.Radio.Bootleg.Desktop.Player_<version>_x64-setup.exe` from the latest
 [release](https://github.com/data-tuna/nts-desktop-winamp/releases/latest)
 and run it. It installs for your user only, so it needs no administrator
 rights, and adds a Start menu and a desktop shortcut.

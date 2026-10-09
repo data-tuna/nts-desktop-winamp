@@ -46,7 +46,7 @@ jobs:
           # Signs the installer for the updater; local builds skip it.
           args: --config src-tauri/tauri.release.conf.json
           tagName: ${{ github.ref_name }}
-          releaseName: Unofficial NTS Player ${{ github.ref_name }}
+          releaseName: NTS Radio Bootleg Desktop Player ${{ github.ref_name }}
           releaseBody: |
             Windows: download the `-setup.exe` below and run it. Windows SmartScreen will warn that the app is unrecognised, because it is not code-signed: click **More info**, then **Run anyway**. Installed copies update themselves on launch.
 
