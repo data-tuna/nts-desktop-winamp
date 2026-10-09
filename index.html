@@ -9,5 +9,14 @@
   </head>
   <body>
     <div id="app"></div>
+    <!-- What is on air, under Webamp's windows. Filled by nowPlaying.ts; Alt+3 toggles it. -->
+    <div id="now-playing" class="draggable" hidden>
+      <img class="draggable" alt="" hidden />
+      <div class="text draggable">
+        <div class="now draggable"></div>
+        <div class="next draggable"></div>
+      </div>
+      <button type="button" title="Hide show info (Alt+3)" aria-label="Hide show info">&times;</button>
+    </div>
   </body>
 </html>
