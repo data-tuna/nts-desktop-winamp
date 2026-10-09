@@ -9,6 +9,16 @@
   ReadRegStr $R9 HKCU "Software\${MANUFACTURER}\Unofficial NTS Player" ""
   ${If} $R9 != ""
   ${AndIf} ${FileExists} "$R9\uninstall.exe"
+    ; An update creates no shortcuts and the old uninstaller deletes its own,
+    ; so recreate under the new name the ones the old copy had.
+    ${If} ${FileExists} "$SMPROGRAMS\Unofficial NTS Player.lnk"
+      CreateShortcut "$SMPROGRAMS\${PRODUCTNAME}.lnk" "$INSTDIR\${MAINBINARYNAME}.exe"
+      !insertmacro SetLnkAppUserModelId "$SMPROGRAMS\${PRODUCTNAME}.lnk"
+    ${EndIf}
+    ${If} ${FileExists} "$DESKTOP\Unofficial NTS Player.lnk"
+      CreateShortcut "$DESKTOP\${PRODUCTNAME}.lnk" "$INSTDIR\${MAINBINARYNAME}.exe"
+      !insertmacro SetLnkAppUserModelId "$DESKTOP\${PRODUCTNAME}.lnk"
+    ${EndIf}
     ; _?= makes ExecWait wait; the uninstaller then cannot delete itself.
     ExecWait '"$R9\uninstall.exe" /S _?=$R9'
     Delete "$R9\uninstall.exe"
