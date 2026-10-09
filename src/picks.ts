@@ -167,7 +167,8 @@ export function playPicksInWidget(webamp: Webamp): void {
   const unload = (): void => {
     if (!current) return;
     current = null;
-    frame.removeAttribute("src");
+    // Removing the src attribute would leave the widget's page running, and playing.
+    frame.src = "about:blank";
     document.body.classList.remove("pick");
   };
 
