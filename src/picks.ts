@@ -15,8 +15,8 @@ const WIDGET_ORIGIN = "https://w.soundcloud.com";
 // A pick asked to play that has not started by then is given up on.
 const START_TIMEOUT_MS = 15_000;
 
-/** The playlist row between the channels and the picks. Its empty url is how the app tells it apart. */
-const SEPARATOR = { url: "", metaData: { artist: "", title: "-".repeat(40) }, duration: 0 };
+/** The playlist row above the mixtapes and above the picks. Its empty url is how the app tells it apart. */
+export const SEPARATOR = { url: "", metaData: { artist: "", title: "-".repeat(40) }, duration: 0 };
 
 export type Pick = {
   /** The SoundCloud track page, query string dropped. It is also the pick's Webamp track url. */
