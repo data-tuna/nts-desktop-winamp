@@ -23,6 +23,25 @@ from the NTS website's schedule; a panel under the player adds the show's
 artwork and what comes next, and Alt+3 or its × hides it. Windows comes
 first, then macOS.
 
+## Install (Windows)
+
+Download `Unofficial.NTS.Player_<version>_x64-setup.exe` from the latest
+[release](https://github.com/data-tuna/nts-desktop-winamp/releases/latest)
+and run it. It installs for your user only, so it needs no administrator
+rights, and adds a Start menu and a desktop shortcut.
+
+**Windows SmartScreen will warn you.** The installer is not code-signed, so
+Windows shows "Windows protected your PC". Click **More info**, then **Run
+anyway**. Your browser may also flag the download as uncommon; keep it.
+
+The app updates itself. Each time it starts, it checks GitHub for a newer
+release; if there is one, it installs it and restarts, which interrupts the
+stream for a few seconds. Updates are signed, and the app refuses one whose
+signature does not match.
+
+Uninstall from Settings > Apps. Cached skins stay in
+`%LOCALAPPDATA%\com.datatuna.ntswinamp`; delete that folder to remove them.
+
 ## Credits
 
 - [Webamp](https://github.com/captbaritone/webamp) by Jordan Eldredge and
@@ -68,6 +87,24 @@ Before opening a PR, run `npm run check` (typecheck, lint, frontend build).
 CI runs the same on `windows-latest`, plus `cargo fmt --check`. Conventions
 for contributors, human or agent, are in [AGENTS.md](AGENTS.md); the reasoning
 behind the stack is in [docs/decisions.md](docs/decisions.md).
+
+## Releasing
+
+1. Set the same version in `package.json` and `src-tauri/Cargo.toml`, run
+   `npm install` and `cargo check` so the lockfiles follow, and merge that
+   to `main`.
+2. Tag `main` and push the tag:
+
+   ```powershell
+   git tag v0.1.1
+   git push origin v0.1.1
+   ```
+
+The Release workflow builds the installer on `windows-latest`, signs it
+for the updater with the `TAURI_SIGNING_PRIVATE_KEY` and
+`TAURI_SIGNING_PRIVATE_KEY_PASSWORD` repository secrets, and publishes a
+GitHub Release with `latest.json`, which installed copies read. It fails if
+the tag does not match both versions.
 
 ## Licence
 

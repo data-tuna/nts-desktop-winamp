@@ -3,6 +3,7 @@ use std::path::{Path, PathBuf};
 
 use tauri::ipc::{InvokeBody, Request, Response};
 use tauri::{AppHandle, Manager};
+use tauri_plugin_updater::UpdaterExt;
 
 /// Downloaded skins beyond this total are deleted, oldest first.
 const SKIN_CACHE_CAP_BYTES: u64 = 200 * 1024 * 1024;
@@ -11,6 +12,20 @@ const SKIN_CACHE_CAP_BYTES: u64 = 200 * 1024 * 1024;
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
+        .plugin(tauri_plugin_updater::Builder::new().build())
+        .setup(|app| {
+            // A dev build would otherwise replace itself with the release.
+            if !cfg!(debug_assertions) {
+                let app = app.handle().clone();
+                tauri::async_runtime::spawn(async move {
+                    // Offline or no release yet: play on, try next launch.
+                    if let Err(error) = update(app).await {
+                        eprintln!("update check failed: {error}");
+                    }
+                });
+            }
+            Ok(())
+        })
         .invoke_handler(tauri::generate_handler![
             cached_skins,
             read_skin,
@@ -24,6 +39,17 @@ pub fn run() {
         })
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
+}
+
+/// Installs a newer GitHub release, if there is one, and restarts into it.
+/// On Windows the installer closes the app itself, so the stream drops for
+/// the few seconds the install takes.
+async fn update(app: AppHandle) -> tauri_plugin_updater::Result<()> {
+    if let Some(update) = app.updater()?.check().await? {
+        update.download_and_install(|_, _| {}, || {}).await?;
+        app.restart();
+    }
+    Ok(())
 }
 
 /// `%LOCALAPPDATA%\com.datatuna.ntswinamp\skins` on Windows. Skins live only
