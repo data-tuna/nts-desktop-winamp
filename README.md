@@ -20,7 +20,11 @@ and playlist are open carry over to the next launch; the channel does not:
 it always starts on NTS 1. Milkdrop starts closed and opens from Webamp. The
 scrolling title, the playlist and Windows' media overlay show what is on air,
 from the NTS website's schedule; a panel under the player adds the show's
-artwork and what comes next, and Alt+3 or its × hides it. Windows comes
+artwork and what comes next, and Alt+3 or its × hides it. The keyboard's
+media keys play, pause and switch channels. The tray icon shows the show on
+air and has a menu to play, pause, pick a channel, change the skin, start
+with Windows (off until you tick it) or quit. Starting the app again brings
+back the one already running, and it opens where you left it. Windows comes
 first, then macOS.
 
 ## Install (Windows)
@@ -39,7 +43,8 @@ release; if there is one, it installs it and restarts, which interrupts the
 stream for a few seconds. Updates are signed, and the app refuses one whose
 signature does not match.
 
-Uninstall from Settings > Apps. Cached skins stay in
+Uninstall from Settings > Apps. If you ticked "Start with Windows", untick
+it first: the uninstaller does not remove that entry. Cached skins stay in
 `%LOCALAPPDATA%\com.datatuna.ntswinamp`; delete that folder to remove them.
 
 ## Credits

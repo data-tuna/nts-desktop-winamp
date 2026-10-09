@@ -36,7 +36,8 @@ Written in English.
                           Windows' media overlay.
     src-tauri/            The Rust shell (Tauri 2). Window config in tauri.conf.json,
                           permissions in capabilities/. lib.rs holds the skin
-                          cache commands and the update check.
+                          cache commands, the update check, the tray, and
+                          the window's position and click-through region.
     src-tauri/icons/      App icons, generated: tools/make-icon.py, then
                           `npx tauri icon`. Drop the android/ and ios/ output.
     docs/decisions.md     Stack choice, research findings, and why.
@@ -160,10 +161,24 @@ setting the option drops that, so `tauri.conf.json` repeats it before
 `--autoplay-policy=no-user-gesture-required` and
 `--enable-features=HardwareMediaKeyHandling`. Keep all three when adding flags.
 
-**Transparent gaps catch clicks.** When the equaliser is closed between the
-main window and the playlist, the gap is see-through but still belongs to the
-app window: clicks there do not reach the desktop. Click-through needs
-platform code and is not done.
+**The window is clipped to Webamp.** With the equaliser closed between the
+main window and the playlist, the gap is see-through. `main.ts` sends the
+rectangles of Webamp's windows, its open menus and the show panel to
+`set_hit_region`, which sets them as the window's region (`SetWindowRgn`),
+so clicks in the gap reach whatever is behind. Anything new drawn outside
+those (another panel, a tooltip) is cut off until it is added to the
+selector in `clickThroughGaps`. A skin's `region.txt` shape is not
+followed: its transparent corners still take clicks.
+
+**One copy runs at a time.** A second launch hands over to the first and
+exits, which brings the player back. That includes a release build started
+from `src-tauri\target\release` while the installed copy runs: quit one to
+test the other.
+
+**The window's position is saved on quit,** in
+`%APPDATA%\com.datatuna.ntswinamp\.window-state.json`. A killed process
+saves nothing. At launch, and each time the window grows, `lib.rs` pulls it
+back inside the monitor's work area.
 
 **A drag lags the pointer by a few pixels.** The OS drag starts only after
 the pointer has moved 3 px and `startDragging` has returned, and the window
@@ -236,7 +251,9 @@ the way a normal one does. `window-shot.ps1` captures only the app's own
 window (transparent areas come out black), never the desktop behind it, but
 after a skin change it can return a stale frame still showing the old skin;
 `cdp-shot.mjs` shows what is actually painted.
-`ram.ps1` sums the app and all of its WebView2 processes.
+`ram.ps1` sums the app and all of its WebView2 processes. The DevTools
+probes talk to the first page in the target list, which is the skin browser
+when that is open; close it first.
 
 To see the now-playing fallback, add
 `--host-resolver-rules="MAP www.nts.live ~NOTFOUND"` to the browser
