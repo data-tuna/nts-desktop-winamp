@@ -8,7 +8,6 @@
 !macro NSIS_HOOK_POSTINSTALL
   ReadRegStr $R9 HKCU "Software\${MANUFACTURER}\Unofficial NTS Player" ""
   ${If} $R9 != ""
-  ${AndIf} ${FileExists} "$R9\uninstall.exe"
     ; An update creates no shortcuts and the old uninstaller deletes its own,
     ; so recreate under the new name the ones the old copy had.
     ${If} ${FileExists} "$SMPROGRAMS\Unofficial NTS Player.lnk"
@@ -19,12 +18,31 @@
       CreateShortcut "$DESKTOP\${PRODUCTNAME}.lnk" "$INSTDIR\${MAINBINARYNAME}.exe"
       !insertmacro SetLnkAppUserModelId "$DESKTOP\${PRODUCTNAME}.lnk"
     ${EndIf}
-    ; _?= makes ExecWait wait; the uninstaller then cannot delete itself.
-    ExecWait '"$R9\uninstall.exe" /S _?=$R9'
-    Delete "$R9\uninstall.exe"
-    RMDir "$R9"
+    ${If} $R9 == $INSTDIR
+      ; Installed over the old copy: its files, uninstall.exe included, are
+      ; already this version's, so running "its" uninstaller would remove this
+      ; install. Drop only its Settings > Apps entry and shortcuts.
+      DeleteRegKey HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\Unofficial NTS Player"
+      Delete "$SMPROGRAMS\Unofficial NTS Player.lnk"
+      Delete "$DESKTOP\Unofficial NTS Player.lnk"
+      DeleteRegKey HKCU "Software\${MANUFACTURER}\Unofficial NTS Player"
+    ${ElseIf} ${FileExists} "$R9\uninstall.exe"
+      ; _?= makes ExecWait wait; the uninstaller then cannot delete itself.
+      ClearErrors
+      ExecWait '"$R9\uninstall.exe" /S _?=$R9' $0
+      ; A launch failure sets the error flag and leaves $0 as it was.
+      ${IfThen} ${Errors} ${|} StrCpy $0 2 ${|}
+      ; On failure (say the old copy would not close) keep it whole, key
+      ; included, so the next install or update tries again.
+      ${If} $0 = 0
+        Delete "$R9\uninstall.exe"
+        RMDir "$R9"
+        DeleteRegKey HKCU "Software\${MANUFACTURER}\Unofficial NTS Player"
+      ${EndIf}
+    ${Else}
+      DeleteRegKey HKCU "Software\${MANUFACTURER}\Unofficial NTS Player"
+    ${EndIf}
   ${EndIf}
-  DeleteRegKey HKCU "Software\${MANUFACTURER}\Unofficial NTS Player"
 !macroend
 
 ; "Start with Windows" (tauri-plugin-autostart) writes the Run value, and Task
