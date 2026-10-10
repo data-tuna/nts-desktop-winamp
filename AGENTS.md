@@ -255,6 +255,10 @@ commands here rely on. The installed copy lives in
 `%LOCALAPPDATA%\NTS Radio Bootleg Desktop Player`. Renaming the product
 moves that folder and the Settings > Apps entry, so a rename needs a step in
 `src-tauri/windows/hooks.nsh` that removes the old-name copy, as 0.1.1 did.
+"Start with Windows" is a `Run` value named after the product and pointing at
+the old folder, and the old copy's uninstaller deletes it, so a rename after
+0.1.1 also has to move that value (and its `StartupApproved\Run` twin) to the
+new name and path, or autostart silently turns off.
 
 **Release builds update themselves on launch.** A release binary whose
 version is older than the latest GitHub release downloads that release's
