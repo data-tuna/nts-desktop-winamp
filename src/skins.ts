@@ -229,7 +229,7 @@ async function openPicker(): Promise<void> {
   }
   new WebviewWindow("picker", {
     url: "picker.html",
-    title: "Skin Browser (Unofficial NTS Player)",
+    title: "Skin Browser (NTS Radio Bootleg Desktop Player)",
     width: 720,
     height: 560,
     minWidth: 420,
@@ -281,7 +281,9 @@ export function connectPicker(webamp: Webamp): void {
   });
 
   void listen<Skin>("pick-skin", ({ payload }) => void applySkin(webamp, payload).catch(report));
+  // The tray's Skin menu sends random-skin and open-picker too.
   void listen("random-skin", () => {
     void applySkin(webamp, randomSkin(currentSkin()?.md5)).catch(report);
   });
+  void listen("open-picker", () => void openPicker());
 }
