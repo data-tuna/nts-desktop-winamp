@@ -4,7 +4,8 @@ import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { getCurrentWindow, LogicalSize } from "@tauri-apps/api/window";
 import { showNowPlaying } from "./nowPlaying";
-import { listPicks, playPicksInWidget } from "./picks";
+import { listMixtapes } from "./mixtapes";
+import { listPicks, pickOf, playPicksInWidget } from "./picks";
 import { connectPicker, launchSkin, PICKER_MENU_ENTRY, swapInRandomSkin } from "./skins";
 
 // Always start from streams.radiomast.io: it redirects to a regional edge
@@ -77,7 +78,12 @@ function start(initialSkin: { url: string } | undefined): void {
       // --autoplay-policy=no-user-gesture-required (tauri.conf.json).
       webamp.play();
       showNowPlaying(webamp, STREAMS);
-      listPicks(webamp).catch((error: unknown) => console.warn("No NTS Picks this launch", error));
+      // One after the other, so the mixtapes always sit above the picks. A
+      // hanging mixtapes API holds the picks back by its 10 s timeout.
+      listMixtapes(webamp)
+        .catch((error: unknown) => console.warn("No NTS Infinite Mixtapes this launch", error))
+        .then(() => listPicks(webamp))
+        .catch((error: unknown) => console.warn("No NTS Picks this launch", error));
       connectTray(webamp);
       if (initialSkin) URL.revokeObjectURL(initialSkin.url);
       connectPicker(webamp);
@@ -125,9 +131,10 @@ function saveSettings(webamp: Webamp): void {
 /**
  * Next and previous on a channel switch to the other channel. Previous on
  * NTS 1 runs off the top of the playlist (`IS_STOPPED`), and next on NTS 2
- * lands on the separator above the picks. On a pick they move through the
- * picks, and the separator stands for the first pick (previous on it starts
- * it over; shuffle can land there too). A double-click on the separator
+ * lands on the separator above the mixtapes. Elsewhere they move through the
+ * mixtapes and picks, and a separator stands for the track below it (previous
+ * on the first mixtape or pick starts it over; next on the last mixtape goes
+ * to the first pick; shuffle can land there too). A double-click on the separator
  * does the same, since Webamp sends it as the same action.
  */
 function wrapAtPlaylistEnds(store: MiddlewareStore): ReturnType<Middleware> {
@@ -196,10 +203,11 @@ ${track.title}` : "NTS Radio Bootleg Desktop Player";
 /**
  * Webamp treats a media error as the end of the track and moves to the next
  * one, which silently switched NTS 1 to NTS 2 when the network dropped.
- * Replace that: a dropped or stuck stream reloads the same channel, with
- * backoff, for as long as the player is meant to be playing. Pause and stop
- * stay manual, but Play after a drop reloads the stream instead of resuming
- * the dead one. Any user action cancels a pending retry and resets the backoff.
+ * Replace that: a dropped or stuck stream reloads the same channel or
+ * mixtape, with backoff, for as long as the player is meant to be playing.
+ * Pause and stop stay manual, but Play after a drop reloads the stream instead
+ * of resuming the dead one. Any user action cancels a pending retry and resets
+ * the backoff.
  */
 function reconnectOnDrop(): { middleware: Middleware; watch: (webamp: Webamp) => void } {
   let retryMs = RETRY_MIN_MS;
@@ -275,8 +283,9 @@ function reconnectOnDrop(): { middleware: Middleware; watch: (webamp: Webamp) =>
     window.setInterval(() => {
       const elapsed = webamp.media.timeElapsed();
       // A stuck pick is left alone: reloading it would start a two-hour mix over.
+      // Channels and mixtapes are live streams, so a reload loses nothing.
       const { playlist, tracks } = webamp.store.getState();
-      if (!isPlaying() || !isChannel(tracks[playlist.currentTrack ?? NaN]?.url) || elapsed !== lastElapsed) {
+      if (!isPlaying() || pickOf(tracks[playlist.currentTrack ?? NaN]?.url) || elapsed !== lastElapsed) {
         if (isPlaying() && elapsed > lastElapsed && timer === undefined) {
           retryMs = RETRY_MIN_MS;
           dropped = false;

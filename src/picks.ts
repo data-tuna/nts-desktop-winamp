@@ -1,4 +1,4 @@
-// NTS Picks: the latest hand-picked episodes, listed under the two channels
+// NTS Picks: the latest hand-picked episodes, listed under the mixtapes
 // and played through SoundCloud's embed widget, out of sight, with Webamp as
 // the only player on screen. nts.live plays them from SoundCloud too.
 // SoundCloud's API terms ask for credit to the uploader and to SoundCloud,
@@ -6,7 +6,7 @@
 
 import type Webamp from "webamp/butterchurn";
 // The .ts extension lets `node --test` load this file directly.
-import { decodeEntities } from "./live.ts";
+import { text } from "./live.ts";
 
 // Undocumented, like the live API. One page of 12, once per launch.
 const PICKS_API = "https://www.nts.live/api/v2/collections/nts-picks?offset=0&limit=12";
@@ -15,8 +15,8 @@ const WIDGET_ORIGIN = "https://w.soundcloud.com";
 // A pick asked to play that has not started by then is given up on.
 const START_TIMEOUT_MS = 15_000;
 
-/** The playlist row between the channels and the picks. Its empty url is how the app tells it apart. */
-const SEPARATOR = { url: "", metaData: { artist: "", title: "-".repeat(40) }, duration: 0 };
+/** The playlist row above the mixtapes and above the picks. Its empty url is how the app tells it apart. */
+export const SEPARATOR = { url: "", metaData: { artist: "", title: "-".repeat(40) }, duration: 0 };
 
 export type Pick = {
   /** The SoundCloud track page, query string dropped. It is also the pick's Webamp track url. */
@@ -60,11 +60,7 @@ export function parsePicks(body: unknown): Pick[] {
   });
 }
 
-function text(value: unknown): string | undefined {
-  return typeof value === "string" && value.trim() ? decodeEntities(value.trim()) : undefined;
-}
-
-/** Fetch the picks and append them, after a separator, to the playlist. A failure leaves just the channels. */
+/** Fetch the picks and append them, after a separator, to the playlist. A failure leaves them out. */
 export async function listPicks(webamp: Webamp): Promise<void> {
   const response = await fetch(PICKS_API, { signal: AbortSignal.timeout(10_000) });
   if (!response.ok) throw new Error(`NTS picks API: HTTP ${response.status}`);

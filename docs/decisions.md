@@ -220,6 +220,20 @@ from `webamp/butterchurn`. It renders classic `.wsz` skins only.
 - **A pick that does not start within 15 s,** or that the widget reports an
   error for (offline, removed, geo-blocked), stops. Play loads it again.
 
+### NTS Infinite Mixtapes in the playlist (ATA-74, 2026-10-09)
+
+- **Where:** NTS 1, NTS 2, a row of dashes, the mixtapes in the API's order
+  as `<title> - <subtitle>`, another row of dashes, then the picks. The issue
+  asked for them after the two channels; the separator keeps next on NTS 2
+  wrapping to NTS 1. One request to `/api/v2/mixtapes` per launch.
+- **Stream:** `streams.radiomast.io/<id>`, the MP3 behind the API's
+  `audio_stream_endpoint_hls_mp3`. On 2026-10-09 the API's own MP3 url
+  (`stream-mixtape-geo.ntslive.net/mixtapeN`) redirected to exactly that
+  url for all 16 mixtapes, but its first hop has no CORS headers. MP3, so
+  Webamp plays it itself: visualiser, equaliser and reconnect all work.
+- **No now-playing:** the API gives no track or show for a mixtape. The
+  title stays `<title> - <subtitle>` and the show panel stays hidden.
+
 ### Now playing: titles, a show panel, the media overlay (ATA-69, 2026-10-09)
 
 - **Polling:** the live API is asked at launch, a few seconds after the

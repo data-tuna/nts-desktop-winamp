@@ -34,7 +34,8 @@ Written in English.
                           picker.ts is the skin browser window (picker.html).
                           live.ts reads the NTS live API; nowPlaying.ts puts
                           the show in the titles, the show panel and
-                          Windows' media overlay. picks.ts lists NTS Picks
+                          Windows' media overlay. mixtapes.ts lists NTS
+                          Infinite Mixtapes. picks.ts lists NTS Picks
                           and plays them through a hidden SoundCloud widget.
     src-tauri/            The Rust shell (Tauri 2). Window config in tauri.conf.json,
                           permissions in capabilities/. lib.rs holds the skin
@@ -100,8 +101,15 @@ always start from `streams.radiomast.io`.
 **Playback never depends on the now-playing API.** `https://www.nts.live/api/v2/live`
 is undocumented and can change or vanish. When it fails, the titles fall back
 to "NTS 1" and "NTS 2" and the music keeps playing. The same goes for the
-picks API (`/api/v2/collections/nts-picks`): when it fails, the playlist
-holds just the two channels.
+mixtapes API (`/api/v2/mixtapes`) and the picks API
+(`/api/v2/collections/nts-picks`): when one fails, its rows are left out and
+the channels play on.
+
+**Mixtapes play from `streams.radiomast.io/<id>` too.** The API's
+`audio_stream_endpoint` (`stream-mixtape-geo.ntslive.net`) redirects without
+CORS headers, like the channels' relay. `audio_stream_endpoint_hls_mp3` names
+the same radiomast stream, so `mixtapes.ts` drops its `/hls.m3u8` and plays
+that MP3 stream instead.
 
 **A playing pick credits its uploader and SoundCloud, with a link back.**
 SoundCloud's API terms ask for that, so the show panel stays open during a
@@ -132,23 +140,28 @@ pick's url goes to a 1 px, invisible `w.soundcloud.com/player` iframe,
 driven by `postMessage` (SoundCloud's widget protocol, without loading their
 `api.js` into a page that can call Tauri commands). Webamp's visualiser,
 equaliser, balance and Milkdrop cannot hear that audio, so they go quiet
-during a pick. The stall watcher in `main.ts` skips picks, because a reload
+during a pick. The stall watcher in `main.ts` skips picks (channels and
+mixtapes are live streams and reconnect like NTS 1), because a reload
 would start the mix over; instead a pick that has not started 15 s after
 Play, or that the widget reports an error for, stops, and Play reloads the
 widget. During a pick the widget owns the Windows overlay and the media
 keys, so `picks.ts` follows its `play` and `pause` events into Webamp.
 
-**The separator row has an empty url.** `wrapAtPlaylistEnds` turns a play of
-it into a channel switch when a channel is playing (so next on NTS 2 still
-wraps to NTS 1), and into the first pick when a pick is playing (previous on
-the first pick, or shuffle landing on it). A double-click on it does the
-same; Webamp sends both as the same action.
+**The separator rows have an empty url.** One sits above the mixtapes and
+one above the picks. `wrapAtPlaylistEnds` turns a play of either into a
+channel switch when a channel is playing (so next on NTS 2 still wraps to
+NTS 1), and otherwise into the track below it (previous on the first mixtape
+or pick starts it over, next on the last mixtape goes to the first pick,
+shuffle can land on one). A double-click on either does the same; Webamp
+sends both as the same action. `main.ts` lists the mixtapes before the
+picks, one request after the other, so the order holds whichever API answers
+first.
 
 **Webamp skips to the next track when a stream fails.** Its media layer turns
 every audio error into "ended", and "ended" dispatches next, so a network drop
 on NTS 1 used to start NTS 2. `main.ts` replaces that listener: a drop, or a
-clock that has not moved for 10 s while playing, reloads the same channel with
-backoff (1, 2, 4, then every 8 s). A failed load usually errors at once, so
+clock that has not moved for 10 s while playing, reloads the same channel or
+mixtape with backoff (1, 2, 4, then every 8 s). A failed load usually errors at once, so
 those are the gaps; one that just hangs waits out the 10 s first. Pause, stop
 and a channel switch cancel a pending retry and reset the backoff, and Play
 after a drop reloads the stream rather than resuming the dead one. Next on
