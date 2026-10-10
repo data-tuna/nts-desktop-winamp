@@ -35,7 +35,14 @@ export class ZipFileExtractor {
     if (!filePath) return null;
     const zipObj = getCaseInsensitiveFile(this._zip, filePath);
     if (!zipObj) return null;
-    return await zipObj.async("text");
+    // ATA-103 patch: WMP skin files are UTF-16 (with a BOM) or Windows-1252,
+    // not UTF-8; a "©" in the header comment broke the XML parse.
+    const bytes = await zipObj.async("uint8array");
+    const encoding =
+      bytes[0] == 0xff && bytes[1] == 0xfe ? "utf-16le"
+      : bytes[0] == 0xef && bytes[1] == 0xbb ? "utf-8"
+      : "windows-1252";
+    return new TextDecoder(encoding).decode(bytes);
   }
 
   async getFileAsBytes(filePath: string): Promise<ArrayBuffer> {

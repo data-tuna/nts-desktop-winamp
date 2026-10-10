@@ -13,6 +13,11 @@ export default defineConfig({
   server: {
     port: 1420,
     strictPort: true,
+    // ATA-103 spike: the sandboxed WMP frame has an opaque origin, so its
+    // module scripts are cross-origin requests; and the host reads skins
+    // kept outside the repo through /@fs/.
+    cors: true,
+    fs: { allow: [".."] },
     host: host || false,
     hmr: host
       ? {
@@ -33,7 +38,7 @@ export default defineConfig({
     chunkSizeWarningLimit: 2100,
     // The skin picker is a second window with its own page.
     rollupOptions: {
-      input: ["index.html", "picker.html"],
+      input: ["index.html", "picker.html", "wmp-host.html", "wmp-frame.html"],
     },
   },
 });

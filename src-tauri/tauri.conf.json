@@ -3,7 +3,7 @@
   "productName": "NTS Radio Bootleg Desktop Player",
   "mainBinaryName": "nts-desktop-winamp",
   "version": "../package.json",
-  "identifier": "com.datatuna.ntswinamp",
+  "identifier": "com.datatuna.ntswinamp.wmpspike",
   "build": {
     "beforeDevCommand": "npm run dev",
     "devUrl": "http://localhost:1420",

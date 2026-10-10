@@ -75,7 +75,9 @@ export function solvePendingProps(
         } else if (s.indexOf(".") > 0) {
           const [id, attr] = s.split(".");
           const el = component.findobject(id);
-          if (el) {
+          // ATA-103 patch: skip properties the engine does not implement
+          // (Classic.wmz asks for clip_label.fontsize) instead of throwing.
+          if (el && typeof el["get" + attr] == "function") {
             num = el["get" + attr]();
             if (!isNaN(num)) {
               if (sign == "-") {

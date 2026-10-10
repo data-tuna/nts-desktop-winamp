@@ -459,6 +459,9 @@ export default class WindowsMediaPlayer_SkinEngine extends SkinEngine {
   }
 
   parseXmlFragment(xml: string): XmlElement {
+    // ATA-103 patch: WMP matches tag names case-insensitively; Asimov_Radio
+    // opens <buttonGroup> and closes </buttongroup>.
+    xml = xml.replace(/<(\/?)([A-Za-z]\w*)/g, (_, slash, name) => `<${slash}${name.toLowerCase()}`);
     if (!xml.startsWith("<wrapper>")) {
       xml = `<wrapper>${xml}</wrapper>`;
     }
