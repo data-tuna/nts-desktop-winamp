@@ -1,0 +1,16 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>WMP spike host</title>
+    <style>
+      html, body { margin: 0; height: 100%; background: #3a3a3a; overflow: hidden; }
+      iframe { border: 0; width: 100%; height: 100%; display: block; }
+    </style>
+    <script type="module" src="/spike/wmp/host.ts"></script>
+  </head>
+  <body>
+    <!-- ATA-103 spike. allow-scripts only: no allow-same-origin, so the frame gets an opaque origin. -->
+    <iframe id="skin" sandbox="allow-scripts"></iframe>
+  </body>
+</html>

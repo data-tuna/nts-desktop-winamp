@@ -21,7 +21,12 @@
     "webamp": "^2.3.1"
   },
   "devDependencies": {
+    "@rgrove/parse-xml": "^3.0.0",
     "@tauri-apps/cli": "^2",
+    "butterchurn": "^2.6.7",
+    "butterchurn-presets": "^2.4.7",
+    "id3-parser": "^2.0.0",
+    "jszip": "^3.10.1",
     "oxlint": "^1.87.0",
     "typescript": "~6.0.3",
     "vite": "^8.0.16"
