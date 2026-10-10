@@ -28,7 +28,10 @@
       DeleteRegKey HKCU "Software\${MANUFACTURER}\Unofficial NTS Player"
     ${ElseIf} ${FileExists} "$R9\uninstall.exe"
       ; _?= makes ExecWait wait; the uninstaller then cannot delete itself.
+      ClearErrors
       ExecWait '"$R9\uninstall.exe" /S _?=$R9' $0
+      ; A launch failure sets the error flag and leaves $0 as it was.
+      ${IfThen} ${Errors} ${|} StrCpy $0 2 ${|}
       ; On failure (say the old copy would not close) keep it whole, key
       ; included, so the next install or update tries again.
       ${If} $0 = 0
