@@ -292,7 +292,8 @@ Within what ATA-68 asked for, these were the choices:
 
 Windows Media Player skins leave this app's phase 3 and go to a separate app,
 https://github.com/data-tuna/nts-desktop-wmp. Phase 3 here is NTS Infinite
-Mixtapes only. This replaces the WMP half of the phase 3 entry below.
+Mixtapes only. This replaces the WMP half of the phase 3 entry below and the
+research note's "deferred to phase 3".
 
 The ATA-103 spike ran WMP `.wmz` skins through Webamp Modern's engine inside a
 `sandbox="allow-scripts"` iframe. The engine drew 1 of 7 skins correctly, and
