@@ -288,6 +288,19 @@ Within what ATA-68 asked for, these were the choices:
 - Volume and the equaliser and playlist windows are saved. The channel is
   not: the app always opens on NTS 1.
 
+### WMP skins move to their own app (Ata, 2026-10-10)
+
+Windows Media Player skins leave this app's phase 3 and go to a separate app,
+https://github.com/data-tuna/nts-desktop-wmp. Phase 3 here is NTS Infinite
+Mixtapes only. This replaces the WMP half of the phase 3 entry below and the
+research note's "deferred to phase 3".
+
+The ATA-103 spike ran WMP `.wmz` skins through Webamp Modern's engine inside a
+`sandbox="allow-scripts"` iframe. The engine drew 1 of 7 skins correctly, and
+none of the 7 was fully usable. The sandbox held against every escape tried.
+The spike's code stays on branch `agent/lama/ata-103-wmp-spike` (draft PR #14,
+closed) as a reference.
+
 ### Random skin on launch, three phases (Ata, 2026-10-08)
 
 - A random approved Skin Museum skin loads on every launch, with a skin

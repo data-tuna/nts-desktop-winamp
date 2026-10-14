@@ -18,9 +18,10 @@ README may use the NTS logo or name in a way that reads as official, and the
 app must link listeners to `https://www.nts.live/supporters` (the README and
 the skin browser's footer do).
 
-Phases: **1 is Windows**, 2 is macOS, 3 is NTS Infinite Mixtapes plus Windows
-Media Player skins. Windows comes first, and nothing in phase 1 should make
-macOS harder than it needs to be.
+Phases: **1 is Windows**, 2 is macOS, 3 is NTS Infinite Mixtapes. Windows
+comes first, and nothing in phase 1 should make macOS harder than it needs to
+be. Windows Media Player skins are not part of this app: they live in their
+own app, https://github.com/data-tuna/nts-desktop-wmp.
 
 Written in English.
 
